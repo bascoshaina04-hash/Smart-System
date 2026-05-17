@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Guidance • Counseling Records</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ---------- Updated CSS (as requested) ---------- */
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+    h2{font-family:Genos,sans-serif;font-size:50px;margin-bottom:13px}
+    h3{font-family:Genos,sans-serif}
+
+    html,body{height:100vh;overflow:hidden}
+    body{background:#fff;display:flex;min-height:100vh}
+
+    .sidebar{background:#020120;width:265px;padding:20px;color:#fff;flex-shrink:0}
+    .logo{display:flex;align-items:center;margin-bottom:20px}
+    .logo img{width:70px;margin-right:10px;margin-top:-20px}
+    .sidebar button{background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;width:95%;margin-bottom:10px;font-weight:bold;cursor:pointer;border-radius:8px;text-align:center;position:relative;margin-left:5px}
+    .sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .header{display:flex;justify-content:flex-end;align-items:center;background:#020120;height:97px;padding:0 30px;flex-shrink:0}
+    .user-container{position:relative}
+    .user-icon-container{width:50px;height:50px;background:#ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .user-icon-container img{width:40px;height:43px;border-radius:50%;object-fit:cover}
+    .logout{position:absolute;top:60px;right:0;background:#fdb827;padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;display:none;z-index:10}
+
+    .content-area{padding:18px 24px 24px 0;flex:1;display:flex;flex-direction:column;align-items:center}
+    .page-title{font-family:Genos,sans-serif;font-size:35px;margin:12px 0;color:#111;text-align:center}
+
+    .tool-row{display:flex;justify-content:center;align-items:center;gap:16px;width:100%;margin-top:6px}
+    .left-tools{display:flex;gap:10px;align-items:center;margin-right: 355px;}
+    .right-tools{display:flex;align-items:center;gap:8px}
+    .btn{padding:8px 12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+    .btn-primary{background:#fdb827;color:#000}
+    .btn-secondary{background:#e6e6e6;color:#333}
+    .search{padding:8px 12px;border-radius:8px;border:1px solid #ccc;width:220px}
+
+    .filter-select{padding:8px 10px;border-radius:8px;border:1px solid #ccc;background:#fff;font-weight:600}
+
+    .table-wrapper{
+      width:780px;
+      max-height: 420px;
+      border-radius:12px;
+      overflow:auto;
+      background:#fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+      margin-top:14px;
+    }
+
+    .table-wrapper table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:600px;}
+    thead{background:#273ea3;color:#fff;position:sticky;top:0;z-index:2}
+    th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee;overflow-wrap:break-word;vertical-align:middle}
+    tbody tr:hover{background:#f7f9ff}
+    th:nth-child(1),td:nth-child(1){width:70%}
+    th:nth-child(2),td:nth-child(2){width:30%}
+    thead th:last-child{ text-align:right; padding-right:20px; }
+    td .action-cell{ display:flex; align-items:center; justify-content:flex-end; gap:8px; padding-right:12px; }
+
+    .detail-card{
+      width:820px;max-width:calc(100% - 40px);border-radius:12px;background:#fff;box-shadow:0 18px 40px rgba(3,8,20,0.25);padding:20px;color:#111;font-family:Arial, sans-serif;
+    }
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+    .detail-top{display:flex;gap:16px;align-items:center}
+    .detail-avatar{width:84px;height:84px;border-radius:12px;background:#f3f6ff;color:#12357a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px}
+    .detail-meta{flex:1}
+    .detail-meta h2{font-family:Genos,sans-serif;margin:0 0 6px 0;font-size:20px;color:#0b2b66}
+    .meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .meta-pill{background:#f4f7ff;padding:8px 10px;border-radius:10px;font-weight:700;color:#12357a;font-size:13px}
+    .detail-body{margin-top:16px;display:grid;grid-template-columns:1fr;gap:8px}
+    .detail-row{display:flex;gap:12px;align-items:flex-start}
+    .detail-label{min-width:140px;font-weight:800;color:#333}
+    .detail-value{flex:1;color:#222;font-weight:700}
+    .close-x{position:absolute;right:22px;top:16px;background:#fff;border-radius:50%;width:32px;height:32px;border:none;cursor:pointer;font-weight:700;color:#333;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+    @media (max-width:900px){
+      .table-wrapper{max-height:360px; width: 92%}
+      .search{width:160px}
+      .detail-card{width:calc(100% - 32px);padding:16px}
+      .detail-avatar{width:64px;height:64px;font-size:20px}
+      .detail-label{min-width:110px}
+    }
+    .view-btn {
+  background-color: #fdb827;
+  color: #000; 
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: 0.2s ease;
+}
+
+.view-btn:hover {
+  background-color: #e4a522; 
+  transform: translateY(-2px);
+}
+
+.view-btn:active {
+  transform: scale(0.97);
+}
+
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo" onerror="this.style.display='none'">
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button onclick="window.location.href='GuidanceExit.html'">Exit Interview</button>
+    <button onclick="window.location.href='GuidanceAppoint.html'">Appointments</button>
+    <button onclick="window.location.href='GuidanceConsult.html'">Consultations</button>
+    <button onclick="window.location.href='GuidanceAnn.html'">Announcements</button>
+    <button class="active" onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User" onerror="this.style.display='none'">
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogoutConfirm()">Logout</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <h1 class="page-title">Student Case List</h1>
+
+      <div class="tool-row" aria-label="controls">
+        <div class="left-tools">
+          <button id="generateBtn" class="btn btn-primary">Generate</button>
+        </div>
+
+        <div class="right-tools">
+          <select id="statusFilter" class="filter-select" aria-label="Filter status">
+            <option value="all">All</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="pending">Pending</option>
+          </select>
+
+
+          <input id="search" class="search" placeholder="Search student / concern…" />
+        </div>
+      </div>
+
+      <div class="table-wrapper" id="tableWrapper" role="region" aria-label="Student case list">
+        <table>
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <!-- populated from Firestore appointments + consultations -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unified Detail Modal (single card) -->
+  <div id="detailModal" class="modal" aria-hidden="true">
+    <div class="detail-card" role="dialog" aria-modal="true" aria-labelledby="detailTitle" style="position:relative;">
+      <button class="close-x" id="closeDetail" title="Close">✕</button>
+
+      <div class="detail-meta">
+  <h2 id="m_name">Name</h2>
+  <div class="meta-row">
+    <div class="meta-pill" id="m_sid">ID: —</div>
+    <div class="meta-pill" id="m_course">Course/Year: —</div>
+    <div class="meta-pill" id="m_contact">Contact: —</div>
+  </div>
+</div>
+
+
+      <div class="detail-body" id="detailBody">
+        <div class="detail-row"><div class="detail-label">Email</div><div class="detail-value" id="m_email">—</div></div>
+        <div class="detail-row"><div class="detail-label">Concern</div><div class="detail-value" id="m_title">—</div></div>
+        <div class="detail-row"><div class="detail-label">Case Opened</div><div class="detail-value" id="m_opened">—</div></div>
+          <div class="detail-row"><div class="detail-label">Purpose</div><div class="detail-value" id="m_purpose">—</div></div>
+        <div class="detail-row"><div class="detail-label">Case Status</div><div class="detail-value" id="m_status_badge">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout confirm modal -->
+  <div id="logoutConfirm" class="modal" style="display:none;">
+    <div style="background:#fff;padding:18px;border-radius:10px;width:420px;box-shadow:0 10px 30px rgba(0,0,0,.15)">
+      <h3 style="margin-bottom:8px">Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button class="btn btn-secondary" onclick="closeLogoutConfirm()">No</button>
+        <button class="btn btn-primary" onclick="logoutNow()">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF Export Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+
+  <!-- Firebase + script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, onSnapshot, doc, getDoc, getDocs, limit
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM refs
+    const rowsTbody = document.getElementById('rows');
+    const searchEl = document.getElementById('search');
+    const statusFilter = document.getElementById('statusFilter');
+    const detailModal = document.getElementById('detailModal');
+
+    const cache = new Map();
+
+    function escapeHtml(s){ if(s === undefined || s === null) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[c])); }
+    function initials(name){ if(!name) return ''; const p = name.split(/\s+/).filter(Boolean); return ((p[0]||'')[0]||'') + ((p[1]||'')[0]||''); }
+
+    function renderRowsFromCache(){
+  const rows = Array.from(cache.values());
+  const q = (searchEl.value || '').trim().toLowerCase();
+  const st = (statusFilter.value || 'all').toLowerCase();
+
+  const filtered = rows.filter(r => {
+    // normalize status
+    let status =
+      (r.status ||
+       r.caseStatus ||
+       r.case_state ||
+       '').toString().toLowerCase();
+
+    if (!status) status = 'pending';
+
+    // status filter
+    if (st !== 'all' && status !== st) return false;
+
+    // search filter
+    if (!q) return true;
+
+    const text = `
+      ${r.studentName || ''}
+      ${r.name || ''}
+      ${r.studentID || ''}
+      ${r.caseTitle || ''}
+      ${r.concern || ''}
+      ${r.purpose || ''}
+    `.toLowerCase();
+
+    return text.includes(q);
+  });
+
+  rowsTbody.innerHTML = '';
+  if (!filtered.length) {
+    rowsTbody.innerHTML = `
+      <tr>
+        <td colspan="2" style="text-align:center;padding:18px;color:#666">
+          No records found.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  filtered.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(r.studentName || r.name || '(No name)')}</td>
+      <td>
+        <div class="action-cell">
+          <button class="view-btn">View Details</button>
+        </div>
+      </td>
+    `;
+
+    rowsTbody.appendChild(tr);
+
+    tr.querySelector('.view-btn').addEventListener('click', async () => {
+      await showStudentDetailsAndOpenModal(r);
+    });
+  });
+}
+
+    async function resolveStudentForRecord(record) {
+  const studentIdTry = String(
+    record.studentID || record.sid || record.studentId || ''
+  ).trim();
+
+  let studentDoc = null;
+
+  // 1️⃣ Try direct document ID
+  if (studentIdTry) {
+    try {
+      const snap = await getDoc(doc(db, 'students', studentIdTry));
+      if (snap.exists()) return snap.data();
+    } catch {}
+  }
+
+  // 2️⃣ Try querying by studentID / uid
+  if (studentIdTry) {
+    try {
+      const q1 = query(
+        collection(db, 'students'),
+        where('studentID', '==', studentIdTry),
+        limit(1)
+      );
+      const snaps = await getDocs(q1);
+      if (snaps.size) return snaps.docs[0].data();
+    } catch {}
+
+    try {
+      const q2 = query(
+        collection(db, 'students'),
+        where('uid', '==', studentIdTry),
+        limit(1)
+      );
+      const snaps = await getDocs(q2);
+      if (snaps.size) return snaps.docs[0].data();
+    } catch {}
+  }
+
+  // 3️⃣ FINAL fallback: name match (same as View Details)
+  if (record.studentName || record.name) {
+    const nameTry = (record.studentName || record.name).toLowerCase();
+    try {
+      const snaps = await getDocs(collection(db, 'students'));
+      for (const d of snaps.docs) {
+        const data = d.data() || {};
+        const cand = (
+          data.name ||
+          data.studentName ||
+          data.fullName ||
+          ''
+        ).toLowerCase();
+
+        if (cand && cand === nameTry) {
+          return data;
+        }
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+
+  async function exportCasesToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('l', 'mm', 'a4'); // landscape = better table fit
+
+  doc.setFontSize(16);
+  doc.text('Guidance Counseling Records', 14, 15);
+
+  doc.setFontSize(10);
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+  const q = (searchEl.value || '').trim().toLowerCase();
+  const st = (statusFilter.value || 'All').toLowerCase();
+
+  const records = Array.from(cache.values()).filter(r => {
+    const status =
+      (r.status ||
+        r.caseStatus ||
+        (r.closed ? 'closed' : 'pending')).toLowerCase();
+
+    if (st !== 'all' && status !== st) return false;
+    if (!q) return true;
+
+    const text = `
+      ${r.studentName || ''}
+      ${r.studentID || ''}
+      ${r.concern || r.purpose || ''}
+    `.toLowerCase();
+
+    return text.includes(q);
+  });
+
+  const tableBody = [];
+
+  for (const r of records) {
+    const s = (await resolveStudentForRecord(r)) || {};
+
+    tableBody.push([
+      r.studentName || s.name || '—',
+      r.studentID || s.studentID || '—',
+      s.contact || s.mobile || s.contact_num || '—',
+      s.email || '—',
+      s.courseYear || s.course || r.courseYear || '—',
+      r.concern || r.caseTitle || '—',
+      r.purpose || '—',
+      r.status || r.caseStatus || (r.closed ? 'Closed' : 'Pending')
+    ]);
+  }
+
+  doc.autoTable({
+    startY: 28,
+    head: [[
+      'Student Name',
+      'Student ID',
+      'Contact Number',
+      'Email',
+      'Course / Year',
+      'Concern',
+      'Purpose',
+      'Status'
+    ]],
+    body: tableBody,
+    styles: {
+      fontSize: 8,
+      cellPadding: 3
+    },
+    headStyles: {
+      fillColor: [39, 62, 163],
+      textColor: 255
+    },
+    alternateRowStyles: {
+      fillColor: [245, 247, 255]
+    }
+  });
+
+  doc.save('Guidance_Counseling_Records.pdf');
+}
+
+    // populate modal: NOTE: Case Title / Concern is single combined field (caseTitle || concern || purpose)
+    function populateAndOpenModal({ studentDoc = null, apptDoc = null }) {
+
+  // ✅ 1. ALWAYS define these FIRST
+  const s = studentDoc || {};
+  const a = apptDoc || {};
+
+  // ✅ 2. Now it is SAFE to use s and a
+  const displayName =
+    s.name ||
+    s.studentName ||
+    a.studentName ||
+    a.name ||
+    '—';
+
+  const studentIdVal = s.studentID || s.uid || a.studentID || a.sid || '—';
+  const contact = s.contact || s.mobile || s.contact_num || a.contact || a.mobile || '—';
+  const email = s.email || s.contactEmail || a.email || '—';
+  const courseYear = s.courseYear || s.course || a.courseYear || a.course || '—';
+
+  // Concern (replaces Case Title)
+  const caseTitle =
+    (a.caseTitle && a.caseTitle.trim()) ||
+    (a.concern && a.concern.trim()) ||
+    (a.purpose && a.purpose.trim()) ||
+    a.title ||
+    '—';
+
+  const opened = a.openedAt || a.opened || a.createdAt || a.created || null;
+
+  // Purpose
+  let purpose = '—';
+  if (a.purpose) purpose = a.purpose;
+  else if (a._src === 'consultations') purpose = 'Consultation';
+
+  // ✅ 3. Update DOM (only elements that exist)
+  document.getElementById('m_name').textContent = displayName;
+  document.getElementById('m_sid').textContent = 'ID: ' + studentIdVal;
+  document.getElementById('m_course').textContent = 'Course/Year: ' + courseYear;
+  document.getElementById('m_contact').textContent = 'Contact: ' + contact;
+
+  document.getElementById('m_email').textContent = email;
+  document.getElementById('m_title').textContent = caseTitle;
+  document.getElementById('m_purpose').textContent = purpose;
+
+  document.getElementById('m_opened').textContent =
+    opened && opened.toDate
+      ? opened.toDate().toLocaleString()
+      : (opened || '—');
+
+  let statusVal = (a.status || a.caseStatus || '').trim();
+  if (!statusVal) statusVal = a.closed ? 'Closed' : 'Pending';
+
+  const stEl = document.getElementById('m_status_badge');
+  stEl.textContent = statusVal;
+  stEl.style.color = '#fff';
+  stEl.style.background =
+    /(approved|active|ongoing)/i.test(statusVal) ? '#4CAF50' :
+    /(closed|rejected|resolved)/i.test(statusVal) ? '#F44336' :
+    '#9E9E9E';
+  stEl.style.padding = '6px 10px';
+  stEl.style.borderRadius = '8px';
+
+
+  // ✅ 4. Show modal
+  detailModal.style.display = 'flex';
+  detailModal.setAttribute('aria-hidden', 'false');
+}
+
+
+    document.getElementById('closeDetail').addEventListener('click', ()=> {
+      detailModal.style.display = 'none';
+      detailModal.setAttribute('aria-hidden','true');
+    });
+    detailModal.addEventListener('click', e=> { if(e.target === detailModal) { detailModal.style.display = 'none'; detailModal.setAttribute('aria-hidden','true'); } });
+
+    // When View Details clicked: try to find student doc (id or uid or name), then show modal
+    async function showStudentDetailsAndOpenModal(record){
+      try {
+        const studentIdTry = String(record.studentID || record.sid || record.studentId || '').trim();
+        let studentDoc = null;
+
+        if (studentIdTry) {
+          try {
+            const snap = await getDoc(doc(db, 'students', studentIdTry));
+            if (snap.exists()) studentDoc = { id: snap.id, ...snap.data() };
+          } catch(e){ console.warn('students doc fetch by id failed', e); }
+        }
+
+        if (!studentDoc && studentIdTry) {
+          try {
+            const q1 = query(collection(db, 'students'), where('studentID', '==', studentIdTry), limit(1));
+            let snaps = await getDocs(q1);
+            if (snaps && snaps.size) { studentDoc = { id: snaps.docs[0].id, ...snaps.docs[0].data() }; }
+            else {
+              const q2 = query(collection(db, 'students'), where('uid', '==', studentIdTry), limit(1));
+              snaps = await getDocs(q2);
+              if (snaps && snaps.size) { studentDoc = { id: snaps.docs[0].id, ...snaps.docs[0].data() }; }
+            }
+          } catch(e){ console.warn('students query failed', e); }
+        }
+
+        if (!studentDoc && (record.studentName || record.name)) {
+          const nameTry = (record.studentName || record.name).toLowerCase();
+          try {
+            const snaps = await getDocs(collection(db, 'students'));
+            for (const d of snaps.docs) {
+              const data = d.data() || {};
+              const cand = (data.name || data.studentName || data.fullName || '').toLowerCase();
+              if (cand && cand === nameTry) { studentDoc = { id: d.id, ...data }; break; }
+            }
+          } catch(e){ /* ignore */ }
+        }
+
+        // populate modal (notes and other fields are taken from record (appointment or consultation))
+        populateAndOpenModal({ studentDoc: studentDoc, apptDoc: record });
+      } catch (err) {
+        console.error('Failed to load student or appointment data for details:', err);
+        populateAndOpenModal({ studentDoc: null, apptDoc: record });
+      }
+    }
+
+    // Start listeners after auth
+    onAuthStateChanged(auth, (user) => {
+      // if (!user) { location.href = 'Login.html'; return; }
+      startListeners();
+    });
+
+    function startListeners(){
+      // appointments (purpose: Consultation)
+      const qRef = query(collection(db, 'appointments'), where('office', '==', 'guidance'));
+      onSnapshot(qRef, (snap)=>{
+        snap.docs.forEach(d => {
+          const data = d.data();
+          cache.set(d.id, { id:d.id, _src:'appointments', ...data });
+        });
+        renderRowsFromCache();
+      }, (err)=>{ console.error('Failed to load appointments:', err); });
+
+      // consultations (prefer these for caseTitle, notes etc.)
+      try {
+        const q2 = query(collection(db, 'consultations'), where('office', '==', 'guidance'));
+        onSnapshot(q2, (snap)=>{
+          snap.docs.forEach(d => {
+            const data = d.data();
+            cache.set(d.id, { id:d.id, _src:'consultations', ...data });
+          });
+          renderRowsFromCache();
+        }, (err)=>{ console.warn('consultations snapshot error:', err); });
+      } catch(e){ console.warn('consultations listener setup failed', e); }
+    }
+
+    searchEl.addEventListener('input', () => renderRowsFromCache());
+    statusFilter.addEventListener('change', () => renderRowsFromCache());
+    document.addEventListener('keydown', e => { if(e.key === 'Escape'){ detailModal.style.display='none'; detailModal.setAttribute('aria-hidden','true'); }});
+
+document.getElementById('generateBtn')
+  .addEventListener('click', exportCasesToPDF);
+
+    // logout helpers
+    function toggleLogout(){ const b = document.getElementById('logoutBtn'); b.style.display = (b.style.display === 'block') ? 'none' : 'block'; }
+    window.toggleLogout = toggleLogout;
+    function openLogoutConfirm(){ document.getElementById('logoutConfirm').style.display = 'flex'; }
+    function closeLogoutConfirm(){ document.getElementById('logoutConfirm').style.display = 'none'; }
+    async function logoutNow(){ try{ await signOut(auth); window.location.href = 'Login.html'; } catch(e){ alert('Logout failed: ' + (e?.message || e)); } }
+    window.openLogoutConfirm = openLogoutConfirm; window.closeLogoutConfirm = closeLogoutConfirm; window.logoutNow = logoutNow;
+
+  </script>
+</body>
+</html>

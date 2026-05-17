@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clinic Health Report</title>
+
+  <!-- Fonts / icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="ClinicHealthReport.css">
+  
+</head>
+<body>
+
+  <div id="banner" role="status" aria-live="polite"><span id="bannerText"></span> <button id="dismissBanner">OK</button></div>
+
+  <aside class="sidebar" aria-label="Main sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Smart logo">
+      <h2>Smart</h2>
+    </div>
+    <button class="nav-btn" onclick="location.href='ClinicDashboard.html'">Home</button>
+    <button class="nav-btn active" onclick="location.href='ClinicHealthReport.html'">Health Report</button>
+    <button class="nav-btn" onclick="location.href='ClinicMedicineLogs.html'">Medicine Logs</button>
+    <button class="nav-btn" onclick="location.href='ClinicGenerateReport.html'">Generate Report</button>
+  </aside>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="signOutUser()" style="display:none;">Logout</button>
+      </div>
+    </div>
+
+    <main>
+      <div class="content">
+        <div class="controls">
+          <div class="controls-left">
+            <button id="openModalBtn" class="btn-new"><i class="fas fa-plus"></i> New Health Report</button>
+          </div>
+          <div class="controls-right">
+            <button id="generateBtn" class="btn-generate"><i class="fas fa-print"></i> Generate</button>
+            <div class="date-input" title="Filter by date">
+              <i class="fa-regular fa-calendar"></i>
+              <input type="date" id="filterDate" />
+            </div>
+          </div>
+        </div>
+
+        <div class="table-container" role="region" aria-label="Health reports table">
+          <table id="reportsTable" class="recents-table" role="table" aria-label="Health reports">
+            <thead>
+              <tr>
+                <th style="width:130px">Date of Visit</th>
+                <th style="width:260px">Student Name</th>
+                <th style="width:260px">Visit Summary</th>
+                <th style="width:120px">Time</th>
+                <th style="width:260px">Incident</th>
+                <th style="width:160px">Attachment</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal" role="document" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Health Report Submission</h2>
+      <form id="healthForm" class="modal-form" autocomplete="off" novalidate>
+        <div class="form-control"><input type="text" id="studentName" name="studentName" placeholder="Student Name" required /></div>
+        <div class="form-control"><input type="text" id="visitSummary" name="visitSummary" placeholder="Visit Summary" required /></div>
+        <div class="form-control"><input type="date" id="dateOfVisit" name="dateOfVisit" placeholder="Date of Visit" required /></div>
+        <div class="form-control"><input type="time" id="timeOfVisit" name="timeOfVisit" placeholder="Time" required /></div>
+        <div class="form-control full-span"><input type="text" id="incident" name="incident" placeholder="Incident" /></div>
+        <div class="form-control full-span">
+          <input type="file" id="attachment" name="attachment" accept=".jpg,.jpeg,.png,.pdf" />
+          <div id="attachmentName" style="margin-top:8px;color:#fff;"></div>
+        </div>
+        <div class="modal-actions full-span">
+          <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Export Modal -->
+  <div id="confirmExportModal" aria-hidden="true">
+    <div class="confirmBox" role="dialog" aria-modal="true" aria-labelledby="confirmExportTitle">
+      <h3 id="confirmExportTitle">Are you sure you want to generate this Clinic Health Report?</h3>
+      <p style="color:#444; margin-top:6px;">This will download a PDF of the visible table rows.</p>
+      <div class="confirmActions">
+        <button class="no" id="confirmNoBtn">No</button>
+        <button class="yes" id="confirmYesBtn">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase v11 imports (unchanged) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // DOM helpers
+    const $ = id => document.getElementById(id);
+    const banner = $('banner');
+    const bannerText = $('bannerText');
+    const dismissBanner = $('dismissBanner');
+    const openModalBtn = $('openModalBtn');
+    const modalBackdrop = $('modalBackdrop');
+    const cancelBtn = $('cancelBtn');
+    const healthForm = $('healthForm');
+    const reportsTbody = $('reportsTbody');
+    const submitBtn = $('submitBtn');
+    const filterDateInput = $('filterDate');
+    const attachmentEl = $('attachment');
+    const attachmentNameEl = $('attachmentName');
+    const logoutBtn = $('logoutBtn');
+    const generateBtn = $('generateBtn');
+
+    dismissBanner.addEventListener('click', ()=> banner.style.display='none');
+
+    // Modal
+    function openModal(){ modalBackdrop.style.display='flex'; modalBackdrop.setAttribute('aria-hidden','false'); setTimeout(()=>$('studentName').focus(),50); }
+    function closeModal(){ modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true'); healthForm.reset(); attachmentNameEl.textContent=''; }
+    openModalBtn.addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e)=> { if (e.target === modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', (e)=> { if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') closeModal(); });
+
+    // small-file threshold (inline as dataURL)
+    const MAX_INLINE_FILE_BYTES = 900 * 1024; // 900 KB
+
+    // helpers
+    function showBanner(msg){ bannerText.textContent = msg; banner.style.display = 'block'; }
+    function hideBanner(){ banner.style.display = 'none'; }
+
+    // expose showBanner to global for export script
+    window.showBanner = showBanner;
+
+    function formatDateReadable(isoDate) {
+      if (!isoDate) return '';
+      const [y,m,d] = isoDate.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    function formatTimeReadable(timeStr) {
+      if (!timeStr) return '';
+      const [hh,mm] = timeStr.split(':').map(Number);
+      const dt = new Date();
+      dt.setHours(hh, mm, 0, 0);
+      return dt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+
+    // file -> dataURL
+    function fileToDataURL(file){
+      return new Promise((res, rej)=>{
+        const fr = new FileReader();
+        fr.onload = ()=> res(String(fr.result));
+        fr.onerror = rej;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    // render single row
+    function addReportRowToTable(report){
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td'); tdDate.textContent = report.dateOfVisit || ''; tr.appendChild(tdDate);
+      const tdName = document.createElement('td'); tdName.textContent = report.studentName || ''; tr.appendChild(tdName);
+      const tdSummary = document.createElement('td'); tdSummary.textContent = report.visitSummary || ''; tr.appendChild(tdSummary);
+      const tdTime = document.createElement('td'); tdTime.textContent = report.timeOfVisit || ''; tr.appendChild(tdTime);
+      const tdIncident = document.createElement('td'); tdIncident.textContent = report.incident || 'N/A'; tr.appendChild(tdIncident);
+      const tdAttach = document.createElement('td'); tdAttach.className = 'attachment';
+      if (report.attachmentUrl) {
+        tdAttach.innerHTML = `<a href="${report.attachmentUrl}" target="_blank" rel="noopener noreferrer" download="${report.attachmentName||''}">${report.attachmentName||'attachment'}</a>`;
+      } else if (report.attachmentDataUrl) {
+        tdAttach.innerHTML = `<a href="${report.attachmentDataUrl}" download="${report.attachmentName||''}" target="_blank" rel="noopener noreferrer">${report.attachmentName||'attachment'}</a>`;
+      } else {
+        tdAttach.textContent = report.attachmentName || '';
+      }
+      tr.appendChild(tdAttach);
+      if (reportsTbody.firstChild) reportsTbody.insertBefore(tr, reportsTbody.firstChild);
+      else reportsTbody.appendChild(tr);
+    }
+
+    // listener
+    let unsubscribe = null;
+    function startRealtimeListener(){
+      const q = query(collection(db,'health_reports'), orderBy('createdAt','desc'));
+      unsubscribe = onSnapshot(q, snap => {
+        reportsTbody.innerHTML = '';
+        snap.forEach(docSnap => {
+          const d = docSnap.data() || {};
+          addReportRowToTable({
+            id: docSnap.id,
+            studentName: d.studentName,
+            visitSummary: d.visitSummary,
+            dateOfVisit: d.dateOfVisit,
+            timeOfVisit: d.timeOfVisit,
+            incident: d.incident,
+            attachmentName: d.attachmentName,
+            attachmentUrl: d.attachmentUrl,
+            attachmentDataUrl: d.attachmentDataUrl
+          });
+        });
+      }, err => {
+        console.error('onSnapshot error', err);
+        showBanner('Realtime update failed — check console.');
+      });
+    }
+
+    // upload: small files -> dataURL, big files -> storage + getDownloadURL
+    async function handleAttachmentUpload(file){
+      if (!file) return { attachmentName: null, attachmentDataUrl: null, attachmentUrl: null, attachmentSize: null };
+      const safeName = file.name.replace(/[^\w.\-() ]+/g,'_');
+      if (file.size <= MAX_INLINE_FILE_BYTES) {
+        const dataUrl = await fileToDataURL(file);
+        return { attachmentName: safeName, attachmentDataUrl: dataUrl, attachmentUrl: null, attachmentSize: file.size };
+      } else {
+        const ts = Date.now();
+        const path = `health_reports_attachments/${ts}_${safeName}`;
+        const sRef = storageRef(storage, path);
+        await uploadBytes(sRef, file);
+        const url = await getDownloadURL(sRef);
+        return { attachmentName: safeName, attachmentDataUrl: null, attachmentUrl: url, attachmentSize: file.size };
+      }
+    }
+
+    // save to Firestore
+    async function saveReport(payload){
+      await addDoc(collection(db,'health_reports'), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || null
+      });
+    }
+
+    // submit handler
+    healthForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      const oldText = submitBtn.textContent;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        const studentName = $('studentName').value.trim();
+        const visitSummary = $('visitSummary').value.trim();
+        const dateIso = $('dateOfVisit').value;
+        const timeVal = $('timeOfVisit').value;
+        const incident = $('incident').value.trim();
+        const file = attachmentEl.files[0] || null;
+
+        if (!studentName || !visitSummary || !dateIso || !timeVal) {
+          showBanner('Please fill the required fields.');
+          return;
+        }
+
+        const formattedDate = formatDateReadable(dateIso);
+        const formattedTime = formatTimeReadable(timeVal);
+
+        let attachFields = { attachmentName: null, attachmentUrl: null, attachmentDataUrl: null, attachmentSize: null };
+        if (file) {
+          try {
+            attachFields = await handleAttachmentUpload(file);
+          } catch (err) {
+            console.error('Attachment upload failed', err);
+            showBanner('Attachment upload failed. Check Storage rules or console. Report not saved.');
+            return;
+          }
+        }
+
+        const payload = {
+          studentName,
+          visitSummary,
+          dateOfVisit: formattedDate,
+          timeOfVisit: formattedTime,
+          incident,
+          attachmentName: attachFields.attachmentName || null,
+          attachmentUrl: attachFields.attachmentUrl || null,
+          attachmentDataUrl: attachFields.attachmentDataUrl || null,
+          attachmentSize: attachFields.attachmentSize || null
+        };
+
+        await saveReport(payload);
+        closeModal();
+      } catch (err) {
+        console.error('Save failed', err);
+        showBanner('Failed to save report. Check console.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = oldText;
+      }
+    });
+
+    // show selected filename
+    attachmentEl.addEventListener('change', ()=> {
+      const f = attachmentEl.files[0];
+      attachmentNameEl.textContent = f ? `Selected: ${f.name}` : '';
+    });
+
+    // date filter client-side
+    filterDateInput.addEventListener('change', () => {
+      const val = filterDateInput.value;
+      if (!val) return;
+      const formatted = formatDateReadable(val);
+      const rows = Array.from(reportsTbody.querySelectorAll('tr'));
+      rows.forEach(row => {
+        const dateCell = row.children[0];
+        row.style.display = dateCell && dateCell.textContent.trim() === formatted ? '' : 'none';
+      });
+    });
+
+    // signOut helper (for header logout button)
+    function signOutUser(){
+      signOut(auth).catch(err => console.error('Sign-out failed', err));
+    }
+    window.signOutUser = signOutUser;
+    window.toggleLogout = function(){ logoutBtn.style.display = logoutBtn.style.display === 'block' ? 'none' : 'block'; }
+
+    // Require auth like AdminAnn: redirect to Login.html if no authenticated user
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn('No auth user — redirecting to Login.html');
+        window.location.href = 'Login.html';
+        return;
+      }
+      try {
+        const prof = await getDoc(doc(db,'users', user.uid));
+        logoutBtn.style.display = 'block';
+      } catch (err) {
+        console.warn('Could not fetch profile; proceeding', err);
+      }
+      startRealtimeListener();
+    });
+
+    // Hook Generate button to show confirm dialog
+    const confirmModal = $('confirmExportModal');
+    const confirmYesBtn = document.getElementById('confirmYesBtn');
+    const confirmNoBtn = document.getElementById('confirmNoBtn');
+
+    generateBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'flex';
+      confirmModal.setAttribute('aria-hidden','false');
+    });
+    confirmNoBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      confirmModal.setAttribute('aria-hidden','true');
+    });
+
+    // Close confirm modal on outside click
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        confirmModal.style.display = 'none';
+        confirmModal.setAttribute('aria-hidden','true');
+      }
+    });
+  </script>
+
+  <!-- jsPDF + autoTable (only PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Export PDF logic -->
+  <script>
+    // gather visible table data (same logic used before)
+    function gatherTableData() {
+      const table = document.getElementById('reportsTable');
+      if (!table) return { headers: [], rows: [] };
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      const rows = [];
+      Array.from(table.querySelectorAll('tbody tr')).forEach(tr => {
+        if (getComputedStyle(tr).display === 'none') return;
+        const cells = Array.from(tr.children).map(td => {
+          const a = td.querySelector('a');
+          if (a) return a.textContent.trim();
+          return td.textContent.trim();
+        });
+        rows.push(cells);
+      });
+      return { headers, rows };
+    }
+
+    async function generatePDFFile(filename) {
+      const { jsPDF } = window.jspdf;
+      const { headers, rows } = gatherTableData();
+      const doc = new jsPDF('landscape', 'pt', 'letter');
+      const title = 'Clinic Health Reports';
+      doc.setFontSize(14);
+      doc.text(title, 40, 40);
+
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: 60,
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [47, 83, 176], textColor: 255, halign: 'left' },
+        theme: 'grid'
+      });
+
+      doc.save(filename || 'clinic_health_reports.pdf');
+    }
+
+    // When user confirms "Yes" — generate and download PDF immediately
+    document.getElementById('confirmYesBtn').addEventListener('click', async () => {
+      const modal = document.getElementById('confirmExportModal');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden','true');
+      try {
+        await generatePDFFile('clinic_health_reports.pdf');
+      } catch (err) {
+        console.error('PDF generation failed', err);
+        window.showBanner && window.showBanner('PDF export failed. Check console.');
+      }
+    });
+  </script>
+</body>
+</html>

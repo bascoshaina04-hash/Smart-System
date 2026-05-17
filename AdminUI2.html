@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard — Upcoming Appointments</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminUI2.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button class="active" onclick="window.location.href='AdminUI1.html'">Home</button>
+    <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+    <button onclick="window.location.href='AdminVio.html'">Violations</button>
+    <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+    <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+    <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+    <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="status-cards">
+      <div class="card">
+        <div class="bord"><img src="icons/quote-request.png" alt=""></div>
+        <p id="pending-requests">0<br><span>Pending<br>Requests</span></p>
+        
+      </div>
+
+      <div class="card">
+        <div class="bord"><img src="icons/certificate.png" alt=""></div>
+        <p id="pending-certs">0<br><span>Pending<br>Incidents</span></p>
+        
+      </div>
+
+      <div class="card">
+        <div class="bord"><img src="icons/warning (2).png" alt=""></div>
+        <p id="violations-today">0<br><span>Violations<br>Today</span></p>
+        
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button onclick="window.location.href='AdminUI1.html'">Recent Violations</button>
+      <button class="active" onclick="window.location.href='AdminUI2.html'">Upcoming Appointments</button>
+      <button onclick="window.location.href='AdminUI3.html'">Announcements</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-container">
+      <input id="search" type="text" placeholder="🔍 Search by name or purpose...">
+    </div>
+
+    <!-- Table (unchanged) -->
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Time</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody id="appt-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Logout Modal -->
+  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); justify-content:center; align-items:center; z-index:999;">
+    <div style="background:#fff; padding:30px; border-radius:10px; width:300px; text-align:center;">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="margin-top:20px;">
+        <button onclick="logoutNow()" style="background:#fdb827; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Yes</button>
+        <button onclick="closeModal()" style="background:#ccc; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-left:10px;">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Modal -->
+  <div id="summaryModal">
+    <div id="summaryCard">
+      <h3 id="summaryTitle">Summary</h3>
+      <ul id="summaryList"></ul>
+      <div class="summary-actions">
+        <button class="btn btn-secondary" id="summaryClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Firebase + Logic ================= -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, onSnapshot, Timestamp,
+      getDocs, doc, getDoc
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    const $ = (id) => document.getElementById(id);
+    const apptBody = $("appt-body");
+    const searchEl = $("search");
+
+    // Helpers
+    const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+    const addDays    = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+    const pad2 = (n)=>String(n).padStart(2,"0");
+    const parsePrefDate = (s)=>{
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(s||""))) return null;
+      const [y,m,d] = s.split("-").map(Number);
+      return new Date(y, m-1, d);
+    };
+    function fmtTime(date){
+      const h=date.getHours(), m=date.getMinutes();
+      const ampm=h>=12?"PM":"AM", hh=((h+11)%12)+1;
+      return `${hh}:${String(m).padStart(2,"0")} ${ampm}`;
+    }
+    function fmtDate(date){
+      const dd=pad2(date.getDate());
+      const mm=pad2(date.getMonth()+1);
+      const yyyy=date.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+
+    // Caches for modal summaries
+    let cachePendingOSA = [];
+    let cacheViosToday  = [];
+
+    onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "users", user.uid));
+  } catch (err) {
+    console.error("Failed to load user profile:", err);
+    // ❌ DO NOT LOGOUT
+    return;
+  }
+
+  if (!snap.exists()) {
+    console.warn("User profile missing");
+    // ❌ DO NOT LOGOUT
+    return;
+  }
+
+  const role = (snap.data().role || "").toLowerCase();
+
+  // ✅ allow both ADMIN and OSA
+  if (!["admin", "osa"].includes(role)) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  // ✅ user stays logged in
+  initAppointmentsTable();
+  setupViolationsToday();
+  setupPendingRequests();
+  setupPendingCerts();
+  hookSummaryButtons();
+});
+
+
+    // ====== TABLE ====== (Good Moral Requests)
+    function initAppointmentsTable(){
+      const qGM = query(
+        collection(db,"goodMoralRequest"),
+        where("office","in",["osa","OSA","Osa"])
+      );
+
+      let cache = [];
+      onSnapshot(qGM, (snap)=>{
+        cache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        render(cache);
+      }, ()=>{
+        cache = [];
+        render(cache);
+      });
+
+      searchEl.addEventListener("input", ()=>render(cache));
+
+      function render(all){
+        const today0 = startOfDay(new Date());
+        const q = (searchEl.value||"").toLowerCase();
+
+        // treat preferredDate as the date; if missing, still show (sorted by createdAt)
+        const upcoming = all
+          .filter(r => {
+            const pref = parsePrefDate(r.preferredDate);
+            return pref ? pref >= today0 : true;
+          })
+          .sort((a,b)=>{
+            const ad = parsePrefDate(a.preferredDate) || (a.createdAt?.toDate?.() || new Date(8640000000000000));
+            const bd = parsePrefDate(b.preferredDate) || (b.createdAt?.toDate?.() || new Date(8640000000000000));
+            return ad - bd;
+          });
+
+        const rows = upcoming.filter(r=>{
+          const hay = `${r.studentName||""} ${r.purpose||""}`.toLowerCase();
+          return q ? hay.includes(q) : true;
+        });
+
+        apptBody.innerHTML = "";
+        if (!rows.length){
+          apptBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#666; padding:12px;">No upcoming Good Moral requests.</td></tr>`;
+          return;
+        }
+
+        rows.forEach(r=>{
+          // Time must come from createdAt
+          const created = r.createdAt?.toDate?.() || new Date();
+          const timeLabel = fmtTime(created);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.studentName || "(Unknown)"}</td>
+            <td>${timeLabel}</td>
+            <td>${r.purpose || "(—)"}</td>
+          `;
+          apptBody.appendChild(tr);
+        });
+      }
+    }
+
+    // ====== CARDS + caches ======
+    function setupViolationsToday(){
+      const today = startOfDay(new Date());
+      const tomorrow = addDays(today,1);
+      const qToday = query(
+        collection(db,"violations"),
+        where("createdAt", ">=", Timestamp.fromDate(today)),
+        where("createdAt", "<",  Timestamp.fromDate(tomorrow))
+      );
+      onSnapshot(qToday, (snap)=>{
+        $("violations-today").innerHTML = `${snap.size}<br><span>Violations<br>Today</span>`;
+        cacheViosToday = snap.docs
+          .map(d=>({id:d.id, ...d.data()}))
+          .sort((a,b)=>{
+            const da = a.createdAt?.toDate?.() || new Date(0);
+            const db = b.createdAt?.toDate?.() || new Date(0);
+            return db - da;
+          });
+      });
+    }
+
+    // Pending Requests card from goodMoralRequest (OSA only)
+    function setupPendingRequests(){
+      const qReq = query(
+        collection(db, "goodMoralRequest"),
+        where("status","in",["pending","Pending"]),
+        where("office","in",["osa","OSA","Osa"])
+      );
+      onSnapshot(qReq, (snap)=>{
+        const all = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+        $("pending-requests").innerHTML = `${all.length}<br><span>Pending<br>Requests</span>`;
+        cachePendingOSA = all
+          .map(a=>{
+            const pref = parsePrefDate(a.preferredDate);
+            const dtForSort = pref || (a.createdAt?.toDate?.() || new Date());
+            return { ...a, _dt: dtForSort, _created: a.createdAt?.toDate?.() || new Date() };
+          })
+          .sort((a,b)=> a._dt - b._dt);
+      }, ()=>{
+        $("pending-requests").innerHTML = `0<br><span>Pending<br>Requests</span>`;
+        cachePendingOSA = [];
+      });
+    }
+
+    // Pending Incidents placeholder
+    function setupPendingCerts(){
+      $("pending-certs").innerHTML = `0<br><span>Pending<br>Incidents</span>`;
+    }
+
+    // ====== SUMMARY MODAL ======
+    function hookSummaryButtons(){
+      $("viewPendingBtn").addEventListener("click", ()=> openSummary("pending"));
+      $("viewCertsBtn").addEventListener("click",   ()=> openSummary("incidents"));
+      $("viewViolationsBtn").addEventListener("click", ()=> openSummary("violationsToday"));
+      $("summaryClose").addEventListener("click", closeSummary);
+      $("summaryModal").addEventListener("click",(e)=>{ if(e.target.id==="summaryModal") closeSummary(); });
+    }
+
+    async function openSummary(kind){
+      const modal = $("summaryModal");
+      const title = $("summaryTitle");
+      const list  = $("summaryList");
+      list.innerHTML = "";
+
+      if (kind === "pending"){
+        title.textContent = "Pending Good Moral Requests — quick view";
+        const items = cachePendingOSA.slice(0,5);
+        if (!items.length){ list.innerHTML = `<li>No pending Good Moral requests.</li>`; modal.style.display="flex"; return; }
+        items.forEach(a=>{
+          const dateForRow = a._dt || new Date();
+          const timeFromCreated = a._created || new Date();
+          const li = document.createElement("li");
+          li.textContent = `${a.studentName||"(Unknown)"} • ${fmtDate(dateForRow)} ${fmtTime(timeFromCreated)} • ${a.purpose||"—"}`;
+          list.appendChild(li);
+        });
+      } else if (kind === "incidents"){
+        title.textContent = "Pending Incidents — quick view";
+        list.innerHTML = `<li>No pending incidents yet.</li>`;
+      } else if (kind === "violationsToday"){
+        title.textContent = "Violations Today — quick view";
+        const items = cacheViosToday.slice(0,5);
+        if (!items.length){ list.innerHTML = `<li>No violations today.</li>`; modal.style.display="flex"; return; }
+        items.forEach(v=>{
+          const when = v.createdAt?.toDate?.() || new Date();
+          const li = document.createElement("li");
+          li.textContent = `${v.studentName||"(Unknown)"} • ${v.violation||"—"} • ${fmtTime(when)}`;
+          list.appendChild(li);
+        });
+      }
+      modal.style.display = "flex";
+    }
+    function closeSummary(){ $("summaryModal").style.display="none"; }
+
+    // Header helpers
+    window.toggleLogout = function(){ const b=document.getElementById("logoutBtn"); b.style.display = (b.style.display==="block"?"none":"block"); }
+    window.openModal  = function(){ document.getElementById("modalOverlay").style.display="flex"; }
+    window.closeModal = function(){ document.getElementById("modalOverlay").style.display="none"; }
+    window.logoutNow  = async function(){ await signOut(auth); window.location.href="Login.html"; }
+  </script>
+
+  <script>
+    function toggleLogout(){ const logoutBtn=document.getElementById("logoutBtn"); logoutBtn.style.display = logoutBtn.style.display==="block"?"none":"block"; }
+    function openModal(){ document.getElementById("modalOverlay").style.display="flex"; }
+    function closeModal(){ document.getElementById("modalOverlay").style.display="none"; }
+    function logoutNow(){ window.location.href="Login.html"; }
+  </script>
+</body>
+</html>

@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Appointment Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminAppoint.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='AdminUI1.html'">Home</button>
+    <button class="active" onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+    <button onclick="window.location.href='AdminVio.html'">Violations</button>
+    <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+    <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+    <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+    <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn">Logout</button>
+      </div>
+    </div>
+
+    <!-- NEW LAYOUT: left column stacks calendar + select-day card; right column contains search + table -->
+    <div
+      style="
+        display:flex;
+        gap:30px;
+        margin-top:20px;
+        margin-left: 100px;
+        align-items:flex-start;
+      "
+    >
+      <!-- LEFT column: fixed width to keep calendar + select day stacked -->
+      <div id="left-column" style="display:flex; flex-direction:column; gap:18px; width:420px; align-items:flex-start;">
+
+        <!-- Calendar: force left/top alignment (override possible centering from CSS) -->
+        <div class="calendar" style="margin:0 !important; align-self:flex-start;">
+          <div class="calendar-header">
+            <button id="prev-month">‹</button>
+            <div id="month-year"></div>
+            <button id="next-month">›</button>
+          </div>
+          <div class="calendar-body">
+            <div class="calendar-weekdays">
+              <div>Sun</div><div>Mon</div><div>Tue</div>
+              <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+            </div>
+            <div class="calendar-dates"></div>
+          </div>
+          <div class="calendar-legend">
+            <span class="available">● Available</span>
+            <span class="unavailable">● Unavailable</span>
+          </div>
+        </div>
+
+        <!-- Select Day card under the calendar -->
+        <div class="appointment-panel" style="margin:0; align-self:flex-start; width:343px;">
+          <div id="appointment-title">Select Day</div>
+          <h3 id="selected-day-message">Pick a date. If it’s available it shows green.</h3>
+          <button id="set-available-btn" disabled>Set as Available</button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT column: search + table. This sits beside the entire left column. -->
+      <div id="right-column" style="flex:1; min-width:520px; align-self:stretch; margin-left:-200px;">
+        <h4>Recent Appointments</h4>
+        <!-- Search -->
+        <div class="search-container" style="margin-bottom:45px; margin-top:0px; margin-left:150px;">
+          <input id="appt-search" type="text" placeholder="Search by name or purpose..." style="width:100%;">
+        </div>
+
+        <!-- Appointments Table (Good Moral only) -- made scrollable so it fits beside calendar -->
+        <div class="table-wrap" style="max-height:calc(100vh - 180px); overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th class="name">Name</th>
+                <th>Time</th>
+                <th>Purpose</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="appointments-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Availability modal -->
+  <div id="availModal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <h3 id="availTitle">Set Availability</h3>
+
+      <div class="form-row">
+        <div class="form-col">
+          <label for="slotStart">Start time</label>
+          <input id="slotStart" type="time" value="08:00" step="300">
+        </div>
+        <div class="form-col">
+          <label for="slotEnd">End time</label>
+          <input id="slotEnd" type="time" value="17:00" step="300">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-col">
+          <label for="slotDuration">Slot duration (minutes)</label>
+          <input id="slotDuration" type="number" min="5" step="5" value="20">
+          <div class="note">Click a slot to disable it (e.g., lunch). Double-click to edit its cap. Disabled slots are red & struck-through.</div>
+        </div>
+
+        <div class="form-col">
+          <label for="slotCap">Default slot cap</label>
+          <input id="slotCap" type="number" min="1" step="1" value="5" style="width:80px;">
+          <div class="note">Default cap used for slots without an explicit cap.</div>
+        </div>
+      </div>
+
+      <div class="form-col">
+        <label>Generated slots</label>
+        <div id="slotsPreview" class="slots-preview" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <div class="note" id="slotsCount"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="availCancel">Close</button>
+        <button class="btn btn-primary" id="availSave">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW Modal for appointment -->
+  <div id="viewModal" class="modal" style="display:none;">
+    <div class="modal-card" style="max-width:650px;">
+      <span class="close" id="viewClose" style="float:right;cursor:pointer;font-size:20px;">&times;</span>
+      <h3>Appointment Details</h3>
+      <div id="viewContent" style="margin-top:12px;"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+        <button id="viewCloseBtn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approve confirmation modal -->
+  <div id="approveConfirmModal" class="modal" style="display:none;">
+    <div class="modal-card" style="max-width:480px;">
+      <span class="close" id="approveClose" style="float:right;cursor:pointer;font-size:20px;">&times;</span>
+      <h3>Approve Appointment</h3>
+      <p>Are you sure you want to approve this appointment?</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button id="approveCancelBtn" class="btn btn-secondary">Cancel</button>
+        <button id="approveConfirmBtn" class="btn btn-primary">Yes, Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject remarks modal -->
+  <div id="rejectModal" class="modal" style="display:none;">
+    <div class="modal-card" style="max-width:520px;">
+      <span class="close" id="rejectClose" style="float:right;cursor:pointer;font-size:20px;">&times;</span>
+      <h3>Reject Appointment</h3>
+      <p>Please enter a remark explaining the rejection:</p>
+      <textarea id="rejectRemark" style="width:100%;min-height:110px;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px;"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button id="rejectAbort" class="btn btn-secondary">Close</button>
+        <button id="confirmReject" class="btn btn-primary" style="background:#f44336;color:#fff;border:none;">Confirm Reject</button>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+  import {
+    getFirestore, collection, query, where, onSnapshot,
+    serverTimestamp, doc, getDoc, setDoc, Timestamp, updateDoc, getDocs
+  } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  /* DOM & state (availability parts unchanged) */
+  const calendarDates = document.querySelector('.calendar-dates');
+  const monthYear = document.getElementById('month-year');
+  const prevMonthBtn = document.getElementById('prev-month');
+  const nextMonthBtn = document.getElementById('next-month');
+  const setAvailableBtn = document.getElementById('set-available-btn');
+  const selectedDayMsg = document.getElementById("selected-day-message");
+  const apptSearch = document.getElementById("appt-search");
+  const apptBody = document.getElementById("appointments-body");
+
+  const availModal  = document.getElementById('availModal');
+  const availTitle  = document.getElementById('availTitle');
+  const slotStartEl = document.getElementById('slotStart');
+  const slotEndEl   = document.getElementById('slotEnd');
+  const slotDurEl   = document.getElementById('slotDuration');
+  const slotCapEl   = document.getElementById('slotCap');
+  const slotsPreview = document.getElementById('slotsPreview');
+  const slotsCount   = document.getElementById('slotsCount');
+  const availCancel = document.getElementById('availCancel');
+  const availSave   = document.getElementById('availSave');
+
+  const viewModal = document.getElementById('viewModal');
+  const viewContent = document.getElementById('viewContent');
+  const viewClose = document.getElementById('viewClose');
+  const viewCloseBtn = document.getElementById('viewCloseBtn');
+
+  const approveConfirmModal = document.getElementById('approveConfirmModal');
+  const approveConfirmBtn = document.getElementById('approveConfirmBtn');
+  const approveCancelBtn = document.getElementById('approveCancelBtn');
+  const approveClose = document.getElementById('approveClose');
+
+  const rejectModal = document.getElementById('rejectModal');
+  const rejectRemarkEl = document.getElementById('rejectRemark');
+  const confirmRejectBtn = document.getElementById('confirmReject');
+  const rejectAbortBtn = document.getElementById('rejectAbort');
+  const rejectClose = document.getElementById('rejectClose');
+
+  const GOOD_MORAL_COLLECTION = "goodMoralRequest";
+
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  let currentDate = new Date();
+  let currentMonth = currentDate.getMonth();
+  let currentYear = currentDate.getFullYear();
+  let selectedDayElement = null;
+  let selectedFullDate = null;
+  let apptCache = [];
+
+  // availability + counts state
+  let availableDatesSet = new Set();
+  let availDocs = {};   // dateStr -> { _docId, slots:[], caps:{} }
+  let counts = {};      // "YYYY-MM-DD|HH:mm" based on goodMoralRequest rows
+
+  // approval/reject pending appointment references
+  let pendingApproveAppt = null;
+  let pendingRejectAppt = null;
+
+  const pad = (n)=>String(n).padStart(2,'0');
+  const ymd = (y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+  const pretty = (y, mIndex, d)=>`${months[mIndex]} ${d}, ${y}`;
+  function setMsg(t){ selectedDayMsg.textContent=t; }
+
+  function toMinutes(hhmm){ if(!hhmm||!/^\d{1,2}:\d{2}$/.test(hhmm)) return null; const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+  function minutesToHHMM(mins){ const h=Math.floor(mins/60), m=mins%60; return `${pad(h)}:${pad(m)}`; }
+  function generateSlots(s,e,d){
+    const S = toMinutes(s);
+    const E = toMinutes(e);
+    const D = Number(d);
+
+    if(S===null||E===null||!D||D<=0||E<=S) return [];
+
+    const LUNCH_START = 12 * 60; // 12:00
+    const LUNCH_END   = 13 * 60; // 1:00
+
+    const out = [];
+
+    for(let t = S; t < E; t += D){
+
+      // 🚫 Skip lunch break automatically
+      if(t >= LUNCH_START && t < LUNCH_END){
+        continue;
+      }
+
+      out.push(minutesToHHMM(t));
+    }
+
+    return out;
+  }
+  function renderCalendar(month, year){
+    calendarDates.innerHTML=''; monthYear.textContent=`${months[month]} ${year}`;
+    const today=new Date(); const firstDay=new Date(year,month,1).getDay(); const daysInMonth=new Date(year,month+1,0).getDate();
+    for(let i=0;i<firstDay;i++) calendarDates.appendChild(document.createElement('div'));
+    for(let i=1;i<=daysInMonth;i++){
+      const thisDate=ymd(year,month,i); const day=document.createElement('div'); day.textContent=i; day.dataset.date=thisDate;
+      if(i===today.getDate()&&year===today.getFullYear()&&month===today.getMonth()) day.classList.add('current-date');
+      if(availableDatesSet.has(thisDate)) day.classList.add('available-date');
+      day.addEventListener('click',()=>{
+        if(selectedDayElement) selectedDayElement.classList.remove('selected-date');
+        day.classList.add('selected-date'); selectedDayElement=day; selectedFullDate=thisDate;
+        const nice=pretty(year,month,i);
+        setMsg(availableDatesSet.has(thisDate)?`${nice} is available.`:`Selected ${nice}. Click "Set as Available" to publish.`);
+        setAvailableBtn.disabled = false; // enable button now that a date is selected
+      });
+      calendarDates.appendChild(day);
+    }
+  }
+
+  // Listen to ALL availability docs where office == "osa"
+  let unsubAvail = null;
+  function attachAvailabilityListenerAllOsa() {
+    if (unsubAvail) { unsubAvail(); unsubAvail = null; }
+    const qAll = query(collection(db,"availability"), where("office", "==", "osa"));
+    unsubAvail = onSnapshot(qAll, (snap) => {
+      availableDatesSet = new Set();
+      availDocs = {};
+      snap.docs.forEach(d => {
+        const data = d.data() || {};
+        const dstr = data.dateStr;
+        if (!dstr) return;
+        availableDatesSet.add(dstr);
+        availDocs[dstr] = {
+          _docId: d.id,
+          slots: Array.isArray(data.slots)?data.slots:[],
+          caps: data.caps || {},
+          ...data
+        };
+      });
+      renderCalendar(currentMonth, currentYear);
+      pruneFullSlotsForMonth();
+    }, (err) => {
+      console.warn("availability listener failed:", err);
+      availableDatesSet = new Set();
+      availDocs = {};
+      renderCalendar(currentMonth, currentYear);
+    });
+  }
+
+  prevMonthBtn.addEventListener('click', ()=>{ currentMonth--; if(currentMonth<0){currentMonth=11; currentYear--;} renderCalendar(currentMonth,currentYear); });
+  nextMonthBtn.addEventListener('click', ()=>{ currentMonth++; if(currentMonth>11){currentMonth=0; currentYear++;} renderCalendar(currentMonth,currentYear); });
+
+  function openAvailModal(){
+    if(!selectedFullDate){ setMsg("Pick a date first."); return; }
+    const [y,m,d]=selectedFullDate.split('-').map(Number);
+    availTitle.textContent=`Set Availability • ${pretty(y,m-1,d)}`;
+    availModal.style.display="flex";
+
+    const existing = availDocs[selectedFullDate] || { slots:[], caps:{} };
+
+    if(existing.slots.length){
+      slotStartEl.value = existing.slots[0] || "08:00";
+      const step = Math.max(5, (toMinutes(existing.slots[1]||existing.slots[0]) - toMinutes(existing.slots[0]||"08:00")) || 20);
+      slotDurEl.value = step;
+      slotEndEl.value = minutesToHHMM(toMinutes(existing.slots.at(-1)) + step);
+    } else {
+      slotStartEl.value = slotStartEl.value || "08:00";
+      slotEndEl.value   = slotEndEl.value   || "17:00";
+      slotDurEl.value   = slotDurEl.value   || 20;
+    }
+
+    slotCapEl.value = slotCapEl.value || 5;
+
+    let base = generateSlots(slotStartEl.value,slotEndEl.value,slotDurEl.value);
+    const enabled = new Set(base.filter(t => (existing.slots||[]).includes(t)));
+    if (!enabled.size) base.forEach(t=>enabled.add(t)); // first time: enable all
+
+    const capsObj = existing.caps ? { ...existing.caps } : {};
+
+    drawSlotsPreview(base, enabled, capsObj);
+  }
+  function closeAvailModal(){ availModal.style.display="none"; }
+  setAvailableBtn.addEventListener('click', openAvailModal);
+  availCancel.addEventListener('click', closeAvailModal);
+  availModal.addEventListener('click',(e)=>{ if(e.target===availModal) closeAvailModal(); });
+
+  // Draw slots preview (unchanged)
+  function drawSlotsPreview(baseSlots, enabledSet, capsMap){
+    const caps = {};
+    Object.keys(capsMap||{}).forEach(k=>{
+      caps[k] = Number(capsMap[k]) || Number(slotCapEl.value) || 5;
+    });
+
+    slotsPreview.innerHTML = "";
+    baseSlots.forEach(t=>{
+      const capForThis = caps[t] !== undefined ? caps[t] : (Number(slotCapEl.value) || 5);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `slot-chip ${enabledSet.has(t)?'':'off'}`;
+      btn.dataset.time = t;
+      btn.dataset.cap = String(capForThis);
+      btn.innerHTML = `<span class="time">${t}</span> <span class="cap" style="font-size:12px;margin-left:6px;color:#333">(${capForThis})</span>`;
+      if(!enabledSet.has(t)) btn.style.opacity = '0.5'; else btn.style.opacity = '1';
+
+      btn.addEventListener('click', ()=>{
+        if(enabledSet.has(t)){ enabledSet.delete(t); btn.classList.add('off'); btn.style.opacity='0.5'; }
+        else { enabledSet.add(t); btn.classList.remove('off'); btn.style.opacity='1'; }
+        slotsCount.textContent = `${enabledSet.size} slot(s) enabled`;
+      });
+
+      btn.addEventListener('dblclick', ()=>{
+        const raw = prompt(`Set capacity (number) for ${t}:`, String(caps[t] || slotCapEl.value || 5));
+        if (raw === null) return;
+        const n = Number(raw);
+        if (!n || Number.isNaN(n) || n < 1) { alert("Invalid capacity. Must be a number >= 1."); return; }
+        caps[t] = n;
+        btn.dataset.cap = String(n);
+        btn.querySelector('.cap').textContent = `(${n})`;
+      });
+
+      slotsPreview.appendChild(btn);
+    });
+
+    slotsCount.textContent = `${Array.from(enabledSet).length} slot(s) enabled`;
+
+    // Save handler
+    availSave.onclick = async ()=>{
+      if(!selectedFullDate){ closeAvailModal(); return; }
+      const finalSlots = Array.from(enabledSet).sort();
+      if(!finalSlots.length){ alert("Select at least one slot."); return; }
+
+      const finalCaps = {};
+      finalSlots.forEach(t => {
+        if (caps[t] !== undefined) finalCaps[t] = Number(caps[t]);
+        else finalCaps[t] = Number(slotCapEl.value) || 5;
+      });
+
+      const startStr = slotStartEl.value || "08:00";
+      const endStr   = slotEndEl.value   || "17:00";
+      const dur      = Number(slotDurEl.value) || 20;
+      const [y,m,d] = selectedFullDate.split("-").map(Number);
+      const [sh,sm] = startStr.split(":").map(Number);
+      const [eh,em] = endStr.split(":").map(Number);
+
+      const docId = `${selectedFullDate}__osa`;
+      const ref = doc(db,"availability", docId);
+
+      const payload = {
+        dateStr: selectedFullDate,
+        office: "osa",
+        startTime: startStr,
+        endTime: endStr,
+        slotDurationMins: dur,
+        slots: finalSlots,
+        caps: finalCaps,
+        startAt: Timestamp.fromDate(new Date(y, m-1, d, sh||0, sm||0, 0, 0)),
+        endAt: Timestamp.fromDate(new Date(y, m-1, d, eh||0, em||0, 0, 0)),
+        updatedAt: serverTimestamp()
+      };
+
+      try {
+        const snap = await getDoc(ref);
+        if (!snap.exists()) payload.createdAt = serverTimestamp();
+        await setDoc(ref, payload, { merge: true });
+
+        availableDatesSet.add(selectedFullDate);
+        availDocs[selectedFullDate] = {
+          _docId: docId,
+          slots: finalSlots.slice(),
+          caps: finalCaps
+        };
+
+        renderCalendar(currentMonth, currentYear);
+        setMsg(`${pretty(y,m-1,d)} is available. Students will see this date.`);
+        closeAvailModal();
+      } catch (e) {
+        console.error("Could not save availability:", e);
+        alert("Could not save availability. Check browser console for details. Common causes: Firestore security rules or network issues.");
+      }
+    };
+  }
+
+  function recomputeFromInputs(){
+    const base = generateSlots(slotStartEl.value,slotEndEl.value,slotDurEl.value);
+    const enabled = new Set(base);
+    drawSlotsPreview(base, enabled, {});
+  }
+  slotStartEl.addEventListener('input',recomputeFromInputs);
+  slotEndEl.addEventListener('input',recomputeFromInputs);
+  slotDurEl.addEventListener('input',recomputeFromInputs);
+
+  /* ======= Good Moral Requests (OSA) ======= */
+  function normalizeDate(rec){
+    if (typeof rec.preferredDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rec.preferredDate)) return rec.preferredDate;
+    if (typeof rec.dateStr === "string") return rec.dateStr;
+    if (rec.date?.toDate) return rec.date.toDate().toISOString().slice(0,10);
+    if (rec.createdAt?.toDate) return rec.createdAt.toDate().toISOString().slice(0,10);
+    return null;
+  }
+  function normalizeTime(rec){
+    let t = rec.time || rec.preferredTime || rec.slot || rec.timeslot || "";
+    if (!t) return "";
+    const m = String(t).match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+    if (!m) return "";
+    let hh=parseInt(m[1],10), mm=parseInt(m[2]||"0",10), mer=m[3]?.toUpperCase();
+    if(mer==="AM" && hh===12) hh=0; if(mer==="PM" && hh!==12) hh+=12;
+    return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+  }
+  function formatCreatedAtTime(rec){
+    const ts = rec?.createdAt?.toDate ? rec.createdAt.toDate() : null;
+    return ts ? `${pad(ts.getHours())}:${pad(ts.getMinutes())}` : "";
+  }
+  function effectiveDate(rec){
+    if (rec.createdAt?.toDate) return rec.createdAt.toDate();
+    const dstr = normalizeDate(rec);
+    const tstr = normalizeTime(rec) || "00:00";
+    if (!dstr) return new Date(0);
+    const [y,m,d] = dstr.split("-").map(Number);
+    const [hh,mm] = tstr.split(":").map(Number);
+    return new Date(y, m-1, d, hh||0, mm||0);
+  }
+
+  function renderGoodMoralTable(){
+  const s = (apptSearch.value || "").toLowerCase();
+
+  const list = apptCache
+    .slice()
+    .sort((a,b)=>effectiveDate(a)-effectiveDate(b))
+    .filter(r=>{
+      const hay = `${r.studentName||""} ${r.purpose||""} ${r.status||""} ${r.documentType||""}`.toLowerCase();
+      return s ? hay.includes(s) : true;
+    });
+
+  apptBody.innerHTML = "";
+
+  if (!list.length) {
+    apptBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align:center; color:#666; padding:12px;">
+          No Good Moral requests to show.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  list.forEach(rec=>{
+    const timeDisp = formatCreatedAtTime(rec) || normalizeTime(rec) || "—";
+    const purpose  = rec.purpose || rec.documentType || "Good Moral";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${rec.studentName || "(Unknown)"}</td>
+      <td>${timeDisp}</td>
+      <td>${purpose}</td>
+      <td class="status-cell">${rec.status || "pending"}</td>
+    `;
+
+    apptBody.appendChild(tr);
+  });
+}
+
+  // view modal close
+  viewClose.addEventListener('click', ()=> viewModal.style.display = 'none');
+  viewCloseBtn.addEventListener('click', ()=> viewModal.style.display = 'none');
+  viewModal.addEventListener('click', (e)=> { if (e.target === viewModal) viewModal.style.display = 'none'; });
+
+  // approve modal wiring
+  approveCancelBtn.addEventListener('click', ()=> { pendingApproveAppt = null; approveConfirmModal.style.display = 'none'; });
+  approveClose.addEventListener('click', ()=> { pendingApproveAppt = null; approveConfirmModal.style.display = 'none'; });
+  approveConfirmBtn.addEventListener('click', async ()=>{
+    if (!pendingApproveAppt) { approveConfirmModal.style.display = 'none'; return; }
+    try {
+      await updateDoc(doc(db, GOOD_MORAL_COLLECTION, pendingApproveAppt.id), { status: "approved", approvedAt: serverTimestamp() });
+      // optimistically update UI cache and re-render
+      const idx = apptCache.findIndex(x => x.id === pendingApproveAppt.id);
+      if (idx !== -1) { apptCache[idx].status = "approved"; }
+      renderGoodMoralTable();
+      pendingApproveAppt = null;
+      approveConfirmModal.style.display = 'none';
+    } catch (e) {
+      console.error("Failed to approve appointment:", e);
+      alert("Failed to approve appointment. Try again.");
+    }
+  });
+  approveConfirmModal.addEventListener('click', (e)=> { if (e.target === approveConfirmModal) { pendingApproveAppt = null; approveConfirmModal.style.display = 'none'; } });
+
+  // reject modal wiring
+  rejectAbortBtn.addEventListener('click', ()=> { pendingRejectAppt = null; rejectModal.style.display = 'none'; });
+  rejectClose.addEventListener('click', ()=> { pendingRejectAppt = null; rejectModal.style.display = 'none'; });
+  confirmRejectBtn.addEventListener('click', async ()=>{
+    if (!pendingRejectAppt) { rejectModal.style.display = 'none'; return; }
+    const remark = (rejectRemarkEl.value || "").trim();
+    if (!remark) {
+      if (!confirm("No remark entered. Continue rejecting without remark?")) return;
+    }
+    try {
+      await updateDoc(doc(db, GOOD_MORAL_COLLECTION, pendingRejectAppt.id), {
+        status: "rejected",
+        rejectRemark: remark || null,
+        rejectedAt: serverTimestamp()
+      });
+      // optimistically update UI cache and re-render
+      const idx = apptCache.findIndex(x => x.id === pendingRejectAppt.id);
+      if (idx !== -1) { apptCache[idx].status = "rejected"; apptCache[idx].rejectRemark = remark || null; }
+      renderGoodMoralTable();
+      pendingRejectAppt = null;
+      rejectModal.style.display = 'none';
+    } catch (e) {
+      console.error("Failed to reject appointment:", e);
+      alert("Failed to reject appointment. Try again.");
+    }
+  });
+  rejectModal.addEventListener('click', (e)=> { if (e.target === rejectModal) { pendingRejectAppt = null; rejectModal.style.display = 'none'; } });
+
+  apptSearch.addEventListener('input', renderGoodMoralTable);
+
+  // Count Good Moral bookings (still from goodMoralRequest) for cap-pruning
+  let unsubGM = null;
+  function attachGoodMoralCounter(){
+    if (unsubGM) { unsubGM(); unsubGM = null; }
+    const q = query(collection(db, GOOD_MORAL_COLLECTION), where("office", "in", ["osa","OSA","Osa"]));
+    unsubGM = onSnapshot(q,(snap)=>{
+      counts = {};
+      apptCache = [];
+      snap.docs.forEach(d=>{
+        const a = { id:d.id, ...d.data() };
+        apptCache.push(a);
+
+        const dateStr = normalizeDate(a);
+        const t = normalizeTime(a);
+        const status = String(a.status||"").toLowerCase();
+        if (!dateStr || !t || status==="rejected") return;
+        const key = `${dateStr}|${t}`;
+        counts[key] = (counts[key]||0) + 1;
+      });
+      renderGoodMoralTable();
+      pruneFullSlotsForMonth();
+    }, ()=>{ apptCache=[]; counts={}; renderGoodMoralTable(); });
+  }
+
+  // prune uses doc id saved earlier (availDocs[dateStr]._docId)
+  async function pruneFullSlotsForMonth(){
+    const tasks = [];
+    Object.entries(availDocs).forEach(([dateStr,info])=>{
+      const docId = info._docId || `${dateStr}__osa`; // fallback
+      const caps = info.caps || {};
+      const slots = Array.isArray(info.slots)?info.slots:[];
+      if (!slots.length) return;
+      let changed = false;
+      const remaining = slots.filter(hhmm=>{
+        const key = `${dateStr}|${hhmm}`;
+        const cap = caps[hhmm];
+        const booked = counts[key] || 0;
+        if (cap!=null && booked>=cap) { changed = true; return false; }
+        return true;
+      });
+      if (changed){
+        tasks.push(updateDoc(doc(db,"availability", docId), { slots: remaining }).catch(e => { console.warn("prune update failed for", docId, e); }));
+        availDocs[dateStr].slots = remaining;
+      }
+    });
+    try{ await Promise.all(tasks);}catch(e){ console.warn("prune error", e); }
+    renderCalendar(currentMonth, currentYear);
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  try {
+    const profSnap = await getDoc(doc(db, "users", user.uid));
+    if (!profSnap.exists()) {
+      window.location.href = "Login.html";
+      return;
+    }
+
+    const role = String(profSnap.data().role || "").toLowerCase();
+
+    // ✅ allow Admin + OSA only
+    if (!["admin", "osa"].includes(role)) {
+      window.location.href = "Login.html";
+      return;
+    }
+
+    // ✅ safe to attach listeners
+    attachAvailabilityListenerAllOsa();
+    attachGoodMoralCounter();
+
+  } catch (err) {
+    console.error("Auth check failed:", err);
+    window.location.href = "Login.html";
+  }
+});
+
+
+  window.toggleLogout=function(){
+    const btn=document.getElementById("logoutBtn");
+    btn.style.display=(btn.style.display==="block"?"none":"block");
+  };
+</script>
+</body>
+</html>

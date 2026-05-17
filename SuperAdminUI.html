@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Super Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="SuperAdminUI.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* helper styles */
+    #errorBannerSmall { display:none; color:#b91c1c; margin-left:70px; width:calc(100% - 70px); }
+    .action-btn { padding:6px 10px; border-radius:6px; border:0; cursor:pointer; background:#fdb827; font-weight:600; }
+
+    /* ===== TABLE HEADER (TITLE + BUTTONS) ===== */
+    .table-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin:20px 50px 10px 50px;
+    }
+
+    .table-header h3 {
+      font-family:Genos;
+      font-size:30px;
+      margin:0;
+    }
+
+    /* Edit / Add modal */
+    .modalRoot { display:none; position:fixed; inset:0; background: rgba(0,0,0,0.45); align-items:center; justify-content:center; z-index:2000; }
+    .modalCard { background:#fff; padding:18px; width:640px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.12); font-family: Genos, system-ui, sans-serif; max-height:90vh; overflow:auto; }
+    .modalCard label { display:block; font-size:13px; margin-top:8px; color:#333; }
+    .modalCard input[type="text"], .modalCard input[type="email"], .modalCard input[type="password"], .modalCard select { width:100%; padding:8px 10px; margin-top:6px; border-radius:6px; border:1px solid #ddd; }
+    .modalCard .row { display:flex; gap:10px; }
+    .modalCard .col { flex:1; }
+    .modalCard .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
+    .modalCard .btn { padding:8px 12px; border-radius:6px; border:0; cursor:pointer; }
+    .modalCard .btn.save { background:#0b5ed7; color:#fff; }
+    .modalCard .btn.cancel { background:#e5e7eb; color:#111; }
+
+    .inline-label { display:flex; align-items:center; gap:8px; margin-top:8px; }
+    .small-muted { font-size:13px; color:#666; margin-top:6px; }
+
+    #addUserBtn,
+    #importBtn {
+      background:#fdb827;
+      color:#000;
+      padding:8px 14px;
+      border-radius:6px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo" style="padding:18px;">
+      <img src="icons/FInalLogo.png" alt="Logo" style="width:70px;height:auto;display:block;margin-bottom:20px"/>
+      <h2 style="margin-top: -35px;">Smart</h2>
+    </div>
+    <button class="active" onclick="window.location.href='SuperAdminUI.html'">Accounts</button>
+    <button onclick="window.location.href='SecurityLogs.html'">Activity Logs</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header" style="display:flex; justify-content:flex-end; align-items:center;">
+      
+        <div class="user-container" style="display:flex; gap:12px; align-items:center;">
+          <div class="user-icon-container" style="cursor:pointer;" onclick="toggleLogout()">
+  <img src="icons/user-icon.png" alt="User Icon" style="width:36px;height:36px;border-radius:6px"/>
+</div>
+<button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+      </div>
+      </div>
+
+      <!-- ✅ TABLE TITLE + BUTTONS -->
+  <div class="table-header">
+    <h3>Account Management</h3>
+    <div class="table-actions">
+      <button id="importBtn">Import Excel</button>
+      <button id="addUserBtn">Add User</button>
+    </div>
+  </div>
+  
+    <div id="errorBannerSmall"></div>
+
+    <!-- ✅ TABLE SCROLL AREA -->
+    <div class="table-scroll">
+      <table role="table" aria-label="Accounts table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="casesBody">
+          <!-- filled by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LOGOUT MODAL -->
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:#fff;padding:25px;border-radius:10px;width:320px;text-align:center">
+    <h3>Confirm Logout</h3>
+    <p>Are you sure?</p>
+    <div style="margin-top:18px">
+      <button id="confirmLogoutBtn" onclick="logoutYes()" style="background:#fdb827;padding:8px 16px;border:none;border-radius:6px" >Yes</button>
+      <button id="cancelLogoutBtn" onclick="closeLogout()" style="margin-left:10px;padding:8px 16px">No</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Edit Modal (unchanged) -->
+  <div id="editModal" class="modalRoot">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <h3 id="editTitle" style="margin:0 0 6px 0;">Edit User</h3>
+      <div class="small-muted">Modify fields and click Save. Changes will be written to Firestore.</div>
+
+      <input type="hidden" id="edit_docId" />
+      <label>Username <input id="edit_username" type="text" /></label>
+      <label>Name <input id="edit_name" type="text" /></label>
+      <label>Email <input id="edit_email" type="email" /></label>
+
+      <div class="row">
+        <div class="col">
+          <label>Role
+            <select id="edit_role">
+              <option value="">(none)</option>
+              <option value="guidance">guidance</option>
+              <option value="guard">guard</option>
+              <option value="osa">osa</option>
+              <option value="faculty">faculty</option>
+              <option value="clinic">clinic</option>
+              <option value="student">student</option>
+            </select>
+          </label>
+        </div>
+        <div class="col">
+          <label>Status
+            <select id="edit_status">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+              <option value="pending">pending</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="inline-label">
+        <input id="edit_isActive" type="checkbox" />
+        <label for="edit_isActive">isActive</label>
+      </div>
+
+      <div id="editError" style="color:#b91c1c; display:none; margin-top:8px;"></div>
+      <div id="editSuccess" style="color:green; display:none; margin-top:8px;"></div>
+
+      <div class="actions">
+        <button class="btn cancel" id="editCancel">Cancel</button>
+        <button class="btn save" id="editSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Modal (now includes student fields) -->
+  <div id="addModal" class="modalRoot">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+      <h3 id="addTitle" style="margin:0 0 6px 0;">Add New User</h3>
+      <div class="small-muted">Creating user will add auth account (email/password) and a Firestore user doc. If Role = student, additional student records will be created.</div>
+
+      <label>Username <input id="add_username" type="text" /></label>
+      <label>Name <input id="add_name" type="text" /></label>
+      <label>Email <input id="add_email" type="email" /></label>
+      <label>Password <input id="add_password" type="password" placeholder="min 6 characters" /></label>
+
+      <div class="row">
+        <div class="col">
+          <label>Role
+            <select id="add_role">
+              <option value="">(none)</option>
+              <option value="guidance">guidance</option>
+              <option value="guard">guard</option>
+              <option value="osa">osa</option>
+              <option value="faculty">faculty</option>
+              <option value="clinic">clinic</option>
+              <option value="student">student</option>
+            </select>
+          </label>
+        </div>
+        <div class="col">
+          <label>Status
+            <select id="add_status">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+              <option value="pending">pending</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="inline-label">
+        <input id="add_isActive" type="checkbox" checked />
+        <label for="add_isActive">isActive</label>
+      </div>
+
+      <!-- STUDENT FIELDS: only used/written if role === 'student' -->
+      <hr style="margin-top:12px; margin-bottom:8px;">
+      <div style="font-weight:600; margin-top:6px;">Student-only fields (optional) — will be saved when Role = student</div>
+      <label>Student ID (used for /usernames document id)
+        <input id="add_studentID" type="text" placeholder="e.g. 2022310754" />
+      </label>
+      <div class="row">
+        <div class="col"><label>Course <input id="add_course" type="text" /></label></div>
+        <div class="col"><label>Contact number <input id="add_contact" type="text" /></label></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Emergency person <input id="add_emergency_person" type="text" /></label></div>
+        <div class="col"><label>Emergency number <input id="add_emergency_num" type="text" /></label></div>
+      </div>
+      <label>Address / Live <input id="add_live" type="text" placeholder="Zone / Barangay / City" /></label>
+
+      <div id="addError" style="color:#b91c1c; display:none; margin-top:8px;"></div>
+      <div id="addSuccess" style="color:green; display:none; margin-top:8px;"></div>
+
+      <div class="actions">
+        <button class="btn cancel" id="addCancel">Cancel</button>
+        <button class="btn save" id="addCreate">Create</button>
+      </div>
+    </div>
+  </div>
+
+    <input type="file" id="excelFileInput" accept=".xlsx" style="display:none;" />
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+
+  <!-- Firebase + logic (auto sign-in + add/edit + student writes) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  limit,
+  Timestamp,
+  doc,
+  getDoc,
+  getDocs,        // ✅ ADDED
+  setDoc,
+  updateDoc,       // ✅ ADDED
+  deleteDoc
+  
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // *** WARNING: client-side auto sign-in uses credentials embedded here.
+    // Replace AUTO_SIGNIN_PASSWORD with the real superadmin password if you choose this flow.
+    const AUTO_SIGNIN_EMAIL = "";
+    const AUTO_SIGNIN_PASSWORD = "";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    // init
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    async function logoutAndRecord(auth, db) {
+  const logId = localStorage.getItem("activeLoginLogId");
+
+  if (logId) {
+    try {
+      await updateDoc(doc(db, "login_logs", logId), {
+        logoutTime: new Date().toLocaleString(),
+        status: "Logged Out"
+      });
+    } catch (err) {
+      console.error("Failed to update logoutTime:", err);
+    }
+  } else {
+    console.warn("No activeLoginLogId found.");
+  }
+
+  localStorage.removeItem("activeLoginLogId");
+  await signOut(auth);
+  window.location.href = "Login.html";
+}
+window.logoutYes = async () => {
+  await logoutAndRecord(auth, db);
+};
+// 🔁 toggle logout button when user icon is clicked
+window.toggleLogout = () => {
+  const btn = document.getElementById("logoutBtn");
+  btn.style.display = (btn.style.display === "block") ? "none" : "block";
+};
+
+// 📦 open confirmation modal
+window.openLogout = () => {
+  document.getElementById("modalOverlay").style.display = "flex";
+};
+
+// ❌ close modal
+window.closeLogout = () => {
+  document.getElementById("modalOverlay").style.display = "none";
+};
+
+
+    // DOM refs
+    const casesBody = document.getElementById('casesBody');
+    const errorBannerSmall = document.getElementById('errorBannerSmall');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+    const addUserBtn = document.getElementById('addUserBtn');
+
+    // Edit modal refs
+    const editModal = document.getElementById('editModal');
+    const edit_docId = document.getElementById('edit_docId');
+    const edit_username = document.getElementById('edit_username');
+    const edit_name = document.getElementById('edit_name');
+    const edit_email = document.getElementById('edit_email');
+    const edit_role = document.getElementById('edit_role');
+    const edit_status = document.getElementById('edit_status');
+    const edit_isActive = document.getElementById('edit_isActive');
+    const editError = document.getElementById('editError');
+    const editSuccess = document.getElementById('editSuccess');
+    const editCancel = document.getElementById('editCancel');
+    const editSave = document.getElementById('editSave');
+
+    // Add modal refs
+    const addModal = document.getElementById('addModal');
+    const add_username = document.getElementById('add_username');
+    const add_name = document.getElementById('add_name');
+    const add_email = document.getElementById('add_email');
+    const add_password = document.getElementById('add_password');
+    const add_role = document.getElementById('add_role');
+    const add_status = document.getElementById('add_status');
+    const add_isActive = document.getElementById('add_isActive');
+    const add_studentID = document.getElementById('add_studentID');
+    const add_course = document.getElementById('add_course');
+    const add_contact = document.getElementById('add_contact');
+    const add_emergency_person = document.getElementById('add_emergency_person');
+    const add_emergency_num = document.getElementById('add_emergency_num');
+    const add_live = document.getElementById('add_live');
+    const addError = document.getElementById('addError');
+    const addSuccess = document.getElementById('addSuccess');
+    const addCancel = document.getElementById('addCancel');
+    const addCreate = document.getElementById('addCreate');
+
+    let unsubUsers = null;
+
+    function safeText(v){ return v == null ? '' : String(v); }
+    function escapeHtml(str){
+      if (str == null) return '';
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#39;");
+    }
+
+    function renderRows(rows){
+      if (!rows || rows.length === 0) {
+        casesBody.innerHTML = `<tr><td colspan="6" style="padding:14px;color:#666;">No accounts found.</td></tr>`;
+        return;
+      }
+      casesBody.innerHTML = '';
+      rows.forEach(r => {
+        const username = safeText(r.username || r.uid || r.id);
+        const name = safeText(r.name || r.fullName || r.displayName || '');
+        const email = safeText(r.email || '');
+        const role = safeText(r.role || '');
+        const status = safeText(r.status || (r.locked ? 'Inactive' : 'Active') || '');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(username)}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(email)}</td>
+          <td>${escapeHtml(role)}</td>
+          <td>${escapeHtml(status)}</td>
+          <td>
+            <button class="action-btn" data-docid="${escapeHtml(r.id)}">Edit</button>
+          </td>
+        `;
+        const btn = tr.querySelector('.action-btn');
+        if (btn) btn.addEventListener('click', () => openEditModal(r.id));
+        casesBody.appendChild(tr);
+      });
+    }
+
+    // --- EDIT ---
+    async function openEditModal(docId){
+      editError.style.display = 'none'; editSuccess.style.display = 'none';
+      edit_docId.value = docId;
+      edit_username.value = ''; edit_name.value = ''; edit_email.value = '';
+      edit_role.value = ''; edit_status.value = ''; edit_isActive.checked = false;
+      editModal.style.display = 'flex';
+      try {
+        const dref = doc(db, 'users', docId);
+        const snap = await getDoc(dref);
+        if (!snap.exists()) { editError.style.display = 'block'; editError.textContent = 'User not found.'; return; }
+        const data = snap.data() || {};
+        edit_username.value = safeText(data.username || data.uid || '');
+        edit_name.value = safeText(data.name || data.fullName || '');
+        edit_email.value = safeText(data.email || '');
+        edit_role.value = safeText(data.role || '');
+        edit_status.value = safeText(data.status || '');
+        edit_isActive.checked = !!data.isActive;
+      } catch (err) {
+        console.error('Failed to load user doc', err);
+        editError.style.display = 'block'; editError.textContent = 'Failed to load user: ' + (err.message || String(err));
+      }
+    }
+    function closeEditModal(){ editModal.style.display = 'none'; editError.style.display='none'; editSuccess.style.display='none'; }
+    editCancel.addEventListener('click', closeEditModal);
+
+    editSave.addEventListener('click', async () => {
+      editError.style.display = 'none'; editSuccess.style.display = 'none';
+      const docId = edit_docId.value;
+      if (!docId) { editError.style.display = 'block'; editError.textContent = 'Missing document id.'; return; }
+      const usernameVal = edit_username.value.trim();
+      const nameVal = edit_name.value.trim();
+      const emailVal = edit_email.value.trim();
+      const roleVal = edit_role.value;
+      const statusVal = edit_status.value;
+      const isActiveVal = edit_isActive.checked;
+      if (!usernameVal) { editError.style.display = 'block'; editError.textContent = 'Username is required.'; return; }
+      if (!emailVal) { editError.style.display = 'block'; editError.textContent = 'Email is required.'; return; }
+      const payload = { username: usernameVal, name: nameVal || null, email: emailVal, role: roleVal || null, status: statusVal || null, isActive: isActiveVal };
+      editSave.disabled = true; editSave.textContent = 'Saving…';
+      try {
+        const dref = doc(db, 'users', docId);
+        await updateDoc(dref, payload);
+        editSuccess.style.display = 'block'; editSuccess.textContent = 'Saved successfully.';
+        setTimeout(()=> closeEditModal(), 700);
+      } catch (err) {
+        console.error('Update failed', err);
+        editError.style.display = 'block';
+        const code = err.code || '';
+        if (code === 'permission-denied') {
+          editError.innerHTML = 'Update failed: permission-denied. Your Firestore rules may disallow writing to /users.';
+        } else { editError.textContent = 'Update failed: ' + (err.message || String(err)); }
+      } finally {
+        editSave.disabled = false; editSave.textContent = 'Save';
+      }
+    });
+
+    // --- ADD USER ---
+    function openAddModal(){
+      addError.style.display = 'none'; addSuccess.style.display = 'none';
+      add_username.value = ''; add_name.value = ''; add_email.value = ''; add_password.value = '';
+      add_role.value = ''; add_status.value = 'active'; add_isActive.checked = true;
+      add_studentID.value = ''; add_course.value = ''; add_contact.value = ''; add_emergency_person.value = ''; add_emergency_num.value = ''; add_live.value = '';
+      // reset password readonly state
+      add_password.readOnly = false;
+      addModal.style.display = 'flex';
+    }
+    function closeAddModal(){ addModal.style.display = 'none'; addError.style.display='none'; addSuccess.style.display='none'; }
+    addCancel.addEventListener('click', closeAddModal);
+    addUserBtn.addEventListener('click', openAddModal);
+
+    // When role changes: support student and faculty auto-password behavior
+    add_role.addEventListener('change', () => {
+      const roleVal = add_role.value;
+      if (roleVal === 'student') {
+        const sid = add_studentID.value.trim();
+        if (sid) {
+          add_password.value = sid;
+          add_password.readOnly = true;
+        } else {
+          add_password.value = '';
+          add_password.readOnly = false;
+        }
+      } else if (roleVal === 'faculty') {
+        const uname = add_username.value.trim();
+        if (uname) {
+          add_password.value = uname;
+          add_password.readOnly = true;
+        } else {
+          add_password.value = '';
+          add_password.readOnly = false;
+        }
+      } else {
+        add_password.readOnly = false;
+      }
+    });
+
+    // Also when studentID field changes, auto-fill password if role === 'student'
+    add_studentID.addEventListener('input', () => {
+      if (add_role.value === 'student') {
+        const sid = add_studentID.value.trim();
+        if (sid) {
+          add_password.value = sid;
+          add_password.readOnly = true;
+        } else {
+          add_password.value = '';
+          add_password.readOnly = false;
+        }
+      }
+    });
+
+    // When username changes, auto-fill password if role === 'faculty'
+    add_username.addEventListener('input', () => {
+      if (add_role.value === 'faculty') {
+        const uname = add_username.value.trim();
+        if (uname) {
+          add_password.value = uname;
+          add_password.readOnly = true;
+        } else {
+          add_password.value = '';
+          add_password.readOnly = false;
+        }
+      }
+    });
+
+    
+
+    /*
+      Create flow (keeps admin session):
+      1) Create Auth user via Identity Toolkit REST signUp (returns localId and idToken).
+      2) Ensure admin is signed-in (client) then write /users/{uid} as admin (client signed-in).
+      3) If role === 'student', also write usernames/{studentID} and /students/{uid}.
+      4) If role === 'faculty', also write usernames/{username}.
+      5) On any Firestore failure after Auth creation, attempt to delete the created Auth account using the idToken.
+    */
+    addCreate.addEventListener('click', async () => {
+      addError.style.display = 'none'; addSuccess.style.display = 'none';
+      const usernameVal = add_username.value.trim();
+      const nameVal = add_name.value.trim();
+      const emailVal = add_email.value.trim();
+      let passwordVal = add_password.value; // may be overridden for students/faculty
+      const roleVal = add_role.value;
+      const statusVal = add_status.value;
+      const isActiveVal = add_isActive.checked;
+
+      const studentIDVal = add_studentID.value.trim();
+      const courseVal = add_course.value.trim();
+      const contactVal = add_contact.value.trim();
+      const emergencyPersonVal = add_emergency_person.value.trim();
+      const emergencyNumVal = add_emergency_num.value.trim();
+      const liveVal = add_live.value.trim();
+
+      if (!usernameVal) { addError.style.display='block'; addError.textContent='Username is required.'; return; }
+      if (!emailVal) { addError.style.display='block'; addError.textContent='Email is required.'; return; }
+
+      // If role is student, require studentID and set password to studentID
+      if (roleVal === 'student') {
+        if (!studentIDVal) {
+          addError.style.display='block'; addError.textContent='Student ID is required for student accounts.'; return;
+        }
+        // override password to be studentID
+        passwordVal = studentIDVal;
+      } else if (roleVal === 'faculty') {
+        // use username as password (faculty id)
+        if (!usernameVal) {
+          addError.style.display='block'; addError.textContent='Username is required for faculty accounts.'; return;
+        }
+        passwordVal = usernameVal;
+      } else {
+        if (!passwordVal || passwordVal.length < 6) { addError.style.display='block'; addError.textContent='Password required (min 6 chars).'; return; }
+      }
+
+      addCreate.disabled = true; addCreate.textContent = 'Creating…';
+
+      const signUpUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+      let createdUid = null;
+      let createdIdToken = null;
+      let usersDocWritten = false;
+
+      try {
+        // 1) Create auth user (REST) — this does NOT change the current client session
+        const signUpResp = await fetch(signUpUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: emailVal,
+            password: passwordVal,
+            returnSecureToken: true
+          })
+        });
+        const signUpJson = await signUpResp.json();
+        if (!signUpResp.ok) {
+          console.error('signUp failed', signUpJson);
+          const errMsg = (signUpJson && signUpJson.error && signUpJson.error.message) ? signUpJson.error.message : JSON.stringify(signUpJson);
+          throw new Error('Auth create failed: ' + errMsg);
+        }
+
+        createdUid = signUpJson.localId;
+        createdIdToken = signUpJson.idToken;
+        console.info('REST auth user created uid=', createdUid);
+
+       
+        // 2) Write /users/{uid}
+        const usersRef = doc(db, 'users', createdUid);
+        const usersPayload = {
+          uid: createdUid,
+          username: usernameVal,
+          name: nameVal || null,
+          email: emailVal,
+          role: roleVal || null,
+          status: statusVal || null,
+          isActive: isActiveVal,
+          createdAt: new Date().toISOString()
+        };
+        await setDoc(usersRef, usersPayload);
+        usersDocWritten = true;
+
+        // 3) ROLE-BASED FIRESTORE WRITES
+
+// === STUDENT ===
+if (roleVal === 'student') {
+
+  // username mapping (studentID)
+  await setDoc(doc(db, 'usernames', studentIDVal), {
+    email: emailVal,
+    uid: createdUid
+  });
+
+  // students/{uid}
+  await setDoc(doc(db, 'students', createdUid), {
+    uid: createdUid,
+    studentID: studentIDVal,
+    name: nameVal || null,
+    email: emailVal,
+    course: courseVal || null,
+    contact_num: contactVal || null,
+    emergency_person: emergencyPersonVal || null,
+    emergency_num: emergencyNumVal || null,
+    live: liveVal || null,
+    isActive: isActiveVal,
+    createdAt: new Date().toISOString()
+  });
+
+  // also store these student-only fields inside users/{uid}
+  await updateDoc(doc(db, 'users', createdUid), {
+    contact_num: contactVal || null,
+    emergency_person: emergencyPersonVal || null,
+    emergency_num: emergencyNumVal || null,
+    live: liveVal || null
+  });
+}
+
+// === FACULTY or GUARD ===
+else if (['faculty', 'guard'].includes(roleVal)) {
+
+  // username mapping
+  await setDoc(doc(db, 'usernames', usernameVal), {
+    email: emailVal,
+    uid: createdUid
+  });
+
+  // add staff contact/emergency/live fields into users/{uid}
+  await updateDoc(doc(db, 'users', createdUid), {
+    contact_num: contactVal || null,
+    emergency_person: emergencyPersonVal || null,
+    emergency_num: emergencyNumVal || null,
+    live: liveVal || null
+  });
+}
+
+// === ADMIN-TYPE ROLES (NO EXTRA FIELDS) ===
+// osa, clinic, guidance, admin, superadmin
+else if (['osa', 'clinic', 'guidance', 'admin', 'superadmin'].includes(roleVal)) {
+
+  // still create username mapping for login
+  await setDoc(doc(db, 'usernames', usernameVal), {
+    email: emailVal,
+    uid: createdUid
+  });
+
+  // DO NOT write contact/emergency/live for these roles
+}
+        addSuccess.style.display = 'block';
+        addSuccess.textContent = 'User created successfully.';
+        setTimeout(()=> closeAddModal(), 800);
+
+      } catch (err) {
+        console.error('Add user flow failed', err);
+
+        // If auth was created but Firestore writes failed — attempt cleanup (delete auth via idToken)
+        if (createdUid && createdIdToken) {
+          try {
+            console.warn('Attempting to delete orphaned auth account (uid=' + createdUid + ')');
+            const deleteUrl = `https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${firebaseConfig.apiKey}`;
+            const delResp = await fetch(deleteUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken: createdIdToken })
+            });
+            const delJson = await delResp.json();
+            if (!delResp.ok) {
+              console.error('Failed to delete orphaned auth account:', delJson);
+              // try to also remove users doc if it was written
+              if (usersDocWritten) {
+                try { await deleteDoc(doc(db, 'users', createdUid)); } catch(e){ console.warn('Failed to delete partial users doc', e); }
+              }
+              addError.style.display = 'block';
+              addError.innerHTML = 'Firestore write failed and cleanup failed. Check Firebase Console Auth panel for orphan account: uid=' + createdUid;
+            } else {
+              console.info('Orphaned auth account deleted.');
+              // if a users doc was written, try to delete it so nothing partial remains
+              if (usersDocWritten) {
+                try { await deleteDoc(doc(db, 'users', createdUid)); } catch(e){ console.warn('Failed to delete partial users doc', e); }
+              }
+              addError.style.display = 'block';
+              addError.innerHTML = 'Firestore write failed; created Auth account was deleted to avoid orphaned account. Error: ' + (err.message || String(err));
+            }
+          } catch (delErr) {
+            console.error('Failed to delete orphaned auth account', delErr);
+            addError.style.display = 'block';
+            addError.innerHTML = 'Firestore write failed and cleanup failed. Manual cleanup required for uid=' + createdUid;
+          }
+        } else {
+          // no created uid — auth creation failed
+          const msg = (err && err.message) ? err.message : String(err);
+          if (msg.includes('EMAIL_EXISTS') || msg.includes('email-already-in-use')) addError.textContent = 'Email already in use.';
+          else if (msg.includes('INVALID_EMAIL')) addError.textContent = 'Invalid email address.';
+          else if (msg.includes('AUTO_SIGNIN_PASSWORD')) addError.textContent = msg;
+          else addError.textContent = 'Failed: ' + msg;
+        }
+      } finally {
+        addCreate.disabled = false; addCreate.textContent = 'Create';
+      }
+    });
+
+    // --- LISTENER ---
+    function startUsersListener(){
+      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+      errorBannerSmall.style.display = 'none';
+      casesBody.innerHTML = `<tr><td colspan="6" style="padding:14px;color:#666;">Listening for users…</td></tr>`;
+      try {
+        const colRef = collection(db, "users");
+        unsubUsers = onSnapshot(colRef, snap => {
+          const rows = snap.docs.map(d => ({ id: d.id, ...(d.data()||{}) }));
+          renderRows(rows);
+          console.info("Realtime users snapshot — rows:", rows.length);
+        }, err => {
+          console.error("onSnapshot(users) error:", err);
+          errorBannerSmall.style.display = 'block';
+          errorBannerSmall.textContent = 'Failed to read users — ' + (err?.message || err);
+          casesBody.innerHTML = `<tr><td colspan="6" style="padding:14px;color:#b91c1c;">Failed to read users — see console for details.</td></tr>`;
+        });
+      } catch (e) {
+        console.error("startUsersListener error:", e);
+        errorBannerSmall.style.display = 'block';
+        errorBannerSmall.textContent = 'Failed to start listener: ' + (e?.message || e);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+  // 🔴 Not logged in
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  try {
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
+
+    // ⏳ Firestore delay safeguard
+    if (!snap.exists()) {
+      console.warn("User document not ready yet. Waiting...");
+      return;
+    }
+
+    const data = snap.data();
+
+    // ✅ Normalize role (prevents OSA/Admin bug)
+    const role = (data.role || "").toLowerCase().trim();
+
+    console.log("Logged in as:", role);
+
+    // =====================================================
+    // 🔐 ROLE-BASED ACCESS CONTROL
+    // =====================================================
+
+    // 🟢 SUPER ADMIN → allowed HERE
+    if (role === "superadmin") {
+      startUsersListener();
+      return;
+    }
+
+    // 🟡 ADMIN or OSA → redirect to AdminUI1.html
+    if (role === "admin" || role === "osa") {
+      window.location.href = "AdminUI1.html";
+      return;
+    }
+
+    // 🔴 Any other role → block
+    alert("Access Denied. You are not authorized to view this page.");
+    await signOut(auth);
+    window.location.href = "Login.html";
+
+  } catch (err) {
+    console.error("Authorization error:", err);
+    alert("Session error. Please login again.");
+    await signOut(auth);
+    window.location.href = "Login.html";
+  }
+});
+
+
+    // initial table message
+    casesBody.innerHTML = `<tr><td colspan="6" style="padding:14px;color:#666;">Loading accounts…</td></tr>`;
+
+    // expose for debug if needed
+    window.openAddModal = openAddModal;
+    window.closeAddModal = closeAddModal;
+
+    const importBtn = document.getElementById("importBtn");
+const excelFileInput = document.getElementById("excelFileInput");
+
+importBtn.addEventListener("click", () => {
+  console.log("Import Excel clicked");
+  excelFileInput.value = ""; // reset
+  excelFileInput.click();
+});
+
+excelFileInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) {
+    console.warn("No file selected");
+    return;
+  }
+
+  console.log("Excel file selected:", file.name);
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if (!rows.length) {
+      alert("Excel file is empty.");
+      return;
+    }
+
+    let createdCount = 0;
+
+    for (const row of rows) {
+      await createUserFromExcel(row);
+      createdCount++;
+    }
+
+    alert(`✅ ${createdCount} users imported successfully.`);
+  } catch (err) {
+    console.error("Import failed:", err);
+    alert("❌ Import failed. Check console for details.");
+  }
+});
+
+
+async function createUserFromExcel(row) {
+  // 🔒 FORCE EVERYTHING TO STRING (PREVENTS .trim ERROR)
+  const roleVal = String(row.role ?? "").trim().toLowerCase();
+  const emailVal = String(row.email ?? "").trim();
+  const studentIDVal = String(row.studentID ?? "").trim();
+  const usernameVal =
+    roleVal === "student"
+      ? studentIDVal
+      : String(row.username ?? "").trim();
+
+  const nameVal = String(row.name ?? "").trim() || null;
+  const statusVal = String(row.status ?? "active").trim();
+  const isActiveVal = row.isActive ?? true;
+
+  const courseVal = String(row.course ?? "").trim() || null;
+  const contactVal = String(row.contact_num ?? "").trim() || null;
+  const emergencyPersonVal = String(row.emergency_person ?? "").trim() || null;
+  const emergencyNumVal = String(row.emergency_num ?? "").trim() || null;
+  const liveVal = String(row.live ?? "").trim() || null;
+
+  // ✅ REQUIRED FIELD CHECK
+  if (!emailVal || !roleVal) {
+    console.warn("⏭ Skipped row (missing email or role):", row);
+    return;
+  }
+
+  // 🔐 PASSWORD RULE (FINAL)
+  let passwordVal = "";
+
+  if (roleVal === "student") {
+    if (!studentIDVal) {
+      console.warn("⏭ Skipped student (missing studentID):", row);
+      return;
+    }
+    passwordVal = studentIDVal; // ✅ studentID = password
+  } else if (roleVal === "faculty") {
+    passwordVal = usernameVal;
+  } else {
+    passwordVal = "Temp@" + Math.random().toString(36).slice(-8);
+  }
+
+  // =============================
+  // STEP 1: CREATE AUTH USER
+  // =============================
+  const signUpUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`;
+  let createdUid;
+
+  try {
+    const resp = await fetch(signUpUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: emailVal,
+        password: passwordVal,
+        returnSecureToken: true
+      })
+    });
+
+    const json = await resp.json();
+
+    if (!resp.ok) {
+      if (json.error?.message === "EMAIL_EXISTS") {
+        console.warn("⏭ Email exists, skipped:", emailVal);
+        return;
+      }
+      throw new Error(json.error?.message || "Auth create failed");
+    }
+
+    createdUid = json.localId;
+  } catch (err) {
+    console.error("❌ Auth creation failed:", err.message);
+    return;
+  }
+
+  // =============================
+  // STEP 2: USERS COLLECTION
+  // =============================
+  await setDoc(doc(db, "users", createdUid), {
+    uid: createdUid,
+    username: usernameVal,
+    name: nameVal,
+    email: emailVal,
+    role: roleVal,
+    status: statusVal,
+    isActive: isActiveVal,
+    createdAt: new Date().toISOString()
+  });
+
+  // =============================
+  // STEP 3: USERNAME MAP
+  // =============================
+  const usernameKey = roleVal === "student" ? studentIDVal : usernameVal;
+
+  await setDoc(doc(db, "usernames", usernameKey), {
+    email: emailVal,
+    uid: createdUid
+  });
+
+  // =============================
+  // STEP 4: STUDENT RECORD
+  // =============================
+  if (roleVal === "student") {
+    await setDoc(doc(db, "students", createdUid), {
+      uid: createdUid,
+      studentID: studentIDVal,
+      name: nameVal,
+      email: emailVal,
+      course: courseVal,
+      contact_num: contactVal,
+      emergency_person: emergencyPersonVal,
+      emergency_num: emergencyNumVal,
+      live: liveVal,
+      isActive: isActiveVal,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  // =============================
+  // STEP 5: STAFF EXTRA FIELDS
+  // =============================
+  if (["faculty", "guard"].includes(roleVal)) {
+    await updateDoc(doc(db, "users", createdUid), {
+      contact_num: contactVal,
+      emergency_person: emergencyPersonVal,
+      emergency_num: emergencyNumVal,
+      live: liveVal
+    });
+  }
+
+  console.log("✅ Imported:", emailVal);
+}
+  </script>
+
+</body>
+</html>

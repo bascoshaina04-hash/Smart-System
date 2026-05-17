@@ -1,0 +1,180 @@
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+h2{font-family:Genos,sans-serif;font-size:50px;margin-bottom:13px}
+body{background-color:#fff;display:flex;min-height:100vh}
+.sidebar{background-color:#020120;width:265px;padding:20px;color:#fff}
+.logo{display:flex;align-items:center;margin-bottom:20px}
+.logo img{width:70px;margin-right:10px;margin-top:-20px}
+.sidebar button{background-color:#fdb827;font-size:17px;border:none;color:#000;padding:15px;width:95%;margin-bottom:10px;font-weight:bold;cursor:pointer;border-radius:8px;text-align:center;position:relative;margin-left:5px}
+.sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+.main-content{flex-grow:1;padding:0}
+.header{display:flex;justify-content:flex-end;align-items:center;background-color:#020120;height:97px;padding:0 30px}
+.user-container{position:relative}
+.user-icon-container { width: 50px; height: 50px; background-color: #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.user-icon-container img { width: 40px; height: 43px; border-radius: 50%; object-fit: cover; }
+.logout { position: absolute; top: 60px; right: 0; background-color: #fdb827; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; z-index: 10; }
+
+/* Controls */
+.top-controls{display:flex;justify-content:space-between;align-items:center;margin:50px 240px 50px 145px}
+.filter-left{display:flex;align-items:center;gap:10px}
+.filter-container select{padding:5px 10px;border-radius:8px;border:1px solid #ccc;font-weight:bold}
+.setslot-btn{padding:6px 12px;border:none;border-radius:8px;background:#fdb827;color:#000;font-weight:bold;cursor:pointer}
+.search-container input{padding:5px 10px;border-radius:8px;border:1px solid #ccc}
+.search-container{margin-left: -1005px; margin-right: 190px; margin-bottom: -10px;}
+
+/* Table wrapper with rounded corners and internal scroll */
+.table-wrapper {
+  width: 70%;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-left: 145px;
+  margin-top: -30px;
+  border-radius: 12px;
+  background: white;
+  padding-right: 1px; /* fix clipping */
+}
+
+/* Table styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 0;
+  border: none;
+  table-layout: fixed;
+  background: transparent;
+  height: auto;
+}
+thead{background-color:#273ea3;color:#fff;border-radius:10px}
+th,td{padding:10px 15px;text-align:left;border-bottom:1px solid #ddd;overflow-wrap:break-word}
+/* Adjusted widths for 6 columns */
+th:nth-child(1),td:nth-child(1){width:16%}
+th:nth-child(2),td:nth-child(2){width:12%}
+th:nth-child(3),td:nth-child(3){width:12%}
+th:nth-child(4),td:nth-child(4){width:10%} /* Status */
+th:nth-child(5),td:nth-child(5){width:8%} /* Action */
+th:nth-child(6),td:nth-child(6){width:8%}  /* Generate */
+th:nth-child(7),td:nth-child(7){width:10%}
+
+
+/* Status chips (like AdminVio) */
+.status-chip { display:inline-block; padding:6px 10px; border-radius:10px; color:#fff; font-weight:700; font-size:13px; white-space:nowrap; }
+.status-pending   { background:#9E9E9E; } /* gray */
+.status-resolved  { background:#4CAF50; } /* green for Approve */
+.status-escalated { background:#F44336; } /* red for Rejected */
+
+/* keep old .status class fallback (not used for chips) */
+.status{display:inline-block;font-size:14px;font-weight:600;color:#111}
+
+/* Dropdown */
+.dropdown{position:relative;display:inline-block}
+.dropdown-btn{background-color:#fdb827;color:#000;padding:6px 12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;white-space:nowrap}
+.dropdown-content{display:none;position:absolute;right:0;top:38px;background-color:#fff;min-width:140px;border:1px solid #ddd;z-index:9999;box-shadow:0 8px 16px rgba(0,0,0,.2);border-radius:8px;overflow:hidden}
+.dropdown-content div{padding:10px;cursor:pointer}
+.dropdown-content div:hover{background-color:#f1f1f1}
+.dropdown.show .dropdown-content{display:block}
+
+/* Generate button */
+.generate-btn {
+  background: #1f6feb;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.generate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Modals */
+.modal{display:none;position:fixed;z-index:10000;padding-top:100px;left:0;top:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
+.modal-content{background:#fff;margin:auto;padding:25px 30px;width:460px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,.2);animation:slideDown .3s ease;font-family:'Genos',sans-serif}
+@keyframes slideDown{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-content h2{font-size:28px;color:#273ea3;margin-bottom:16px;border-bottom:2px solid #fdb827;padding-bottom:8px}
+.modal-content p{margin:8px 0;font-size:17px;color:#333}
+.modal-content span{font-weight:bold;color:#020120}
+.close{color:#666;float:right;font-size:28px;font-weight:bold;cursor:pointer;transition:color .2s ease}
+.close:hover{color:#273ea3}
+
+/* Cap modal specific */
+.cap-grid{display:grid;grid-template-columns:1fr 1fr 120px;gap:10px;margin:10px 0}
+.cap-grid input{padding:8px 10px;border:1px solid #ccc;border-radius:8px}
+.cap-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.btn{border:none;border-radius:8px;padding:8px 12px;font-weight:bold;cursor:pointer}
+.btn-primary{background:#fdb827;color:#000}
+.btn-secondary{background:#e6e6e6;color:#333}
+
+/* small modal helper styles (you probably have your own modal CSS in AdminCert.css) */
+    .modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 1200;}
+    .hidden { display: none; }
+    .modal-box { background-color:#273ea3; color: #fff; border-radius: 10px; padding: 18px; width: 420px; max-width: calc(100% - 32px); box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+    .modal-rows { margin-top:12px; }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+    .btn { padding:8px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
+    .btn-primary { background:#1f6feb; color:#fff; }
+    .btn-danger { background:#e11d48; color:#fff; }
+    .btn-secondary { background:#e6e6e6; color:#111; }
+    textarea { width:100%; min-height:96px; padding:8px; border-radius:6px; border:1px solid #ddd; resize:vertical; }
+
+    /* small layout for top-controls to include range filter */
+    .top-controls { display:flex; align-items:center; gap:12px; justify-content:space-between; margin-bottom:40px; margin-right: 50px; margin-left: 145px;}
+    .filter-left { display:flex; gap:8px; align-items:center; }
+    .filter-container select, #range-filter { padding:8px 10px; border-radius:8px; border:1px solid #e0e0e0; }
+.modal-wide {
+  width: 720px;
+  max-width: 95%;
+}
+
+.modal-close {
+  float: right;
+  font-size: 50px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: red;
+  margin-top: -17px;
+}
+
+.modal-title {
+  margin: 0 0 14px 0;
+  font-family: Genos, sans-serif;
+  font-size: 32px;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 20px;
+  
+}
+
+.modal-item {
+  display: flex;
+  flex-direction: column;
+  
+}
+
+.modal-item.full {
+  grid-column: span 2;
+  
+}
+
+.modal-item .label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  
+}
+
+.modal-item .value {
+  font-size: 15px;
+  color: #111;
+  background: #f5f6fa;
+  padding: 8px 10px;
+  border-radius: 6px;
+  height: 40px;
+}

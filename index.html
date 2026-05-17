@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Firestore Web Test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body>
+  <h1>Firestore Connected ✔</h1>
+  <ul id="list"></ul>
+
+  <script type="module">
+    // 1) Firebase imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getFirestore, collection, onSnapshot, addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // 2) Your config (from Project settings ▸ Your apps ▸ Web)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 3) Init
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // 4) Use the SAME collection your mobile app uses
+    const col = collection(db, "certifications"); // change if your path is different
+
+    // 5) Live read (you should see mobile writes appear here)
+    const list = document.getElementById("list");
+    onSnapshot(col, (snap) => {
+      list.innerHTML = "";
+      snap.forEach(doc => {
+        const li = document.createElement("li");
+        li.textContent = JSON.stringify({ id: doc.id, ...doc.data() });
+        list.appendChild(li);
+      });
+    });
+
+    // 6) (Optional) Quick write test — comment this out after first run
+    // await addDoc(col, { name: "Web test", status: "Pending", createdAt: serverTimestamp() });
+  </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="Login.css">
+  <title>SMART Login</title>
+</head>
+<body>
+
+  <div class="left-panel">
+    <div class="circle large"></div>
+    <div class="circle medium"></div>
+    <div class="circle small"></div>
+    <div class="logo-container">
+      <img src="icons/FInalLogo.png" alt="Smart Logo">
+      <span class="logo-text">Smart</span>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <form class="login-box" id="login-form">
+      <h2>Login</h2>
+
+      <div class="error-message" id="error"></div>
+
+      <div class="input-group">
+        <img src="icons/user-icon.png" class="icon">
+        <input type="text" id="username" placeholder="Email or Username" required>
+      </div>
+
+      <div class="input-group">
+        <img src="icons/lock-icon.png" class="icon">
+        <input type="password" id="password" placeholder="Password" required>
+        <img src="icons/eye-icon.png" class="eye-icon" onclick="togglePassword()">
+      </div>
+
+      <div class="options">
+        <label><input type="checkbox" id="remember"> Remember me</label>
+        <a href="#" id="forgot-link">Forgot Password?</a>
+      </div>
+
+      <button class="login-button" type="submit">Login</button>
+    </form>
+  </div>
+
+  <!-- FIREBASE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      setPersistence,
+      browserLocalPersistence,
+      browserSessionPersistence,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      addDoc,
+      collection,
+      serverTimestamp,
+      query,
+      where,
+      getDocs,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const $ = (id) => document.getElementById(id);
+    const showError = (msg) => $("error").textContent = msg;
+
+    /* ================= FAILED LOGIN ================= */
+    async function logFailedAttempt(userInput) {
+      await addDoc(collection(db, "security_alerts"), {
+        userID: userInput || "Unknown",
+        message: "Failed login attempt",
+        status: "Failed",
+        timestamp: serverTimestamp()
+      });
+    }
+
+    /* ================= SUCCESS LOGIN ================= */
+    async function logSuccessfulLogin(userData, authUser) {
+
+      // 🔁 AUTO-CLOSE PREVIOUS ACTIVE SESSION (IF ANY)
+      const q = query(
+        collection(db, "login_logs"),
+        where("uid", "==", authUser.uid),
+        where("status", "==", "Logged In")
+      );
+
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        await updateDoc(d.ref, {
+          logoutTime: new Date().toLocaleString(),
+          status: "Logged Out"
+        });
+      }
+
+      // ✅ CREATE NEW LOGIN LOG
+      const docRef = await addDoc(collection(db, "login_logs"), {
+        userID: userData.userID || userData.username || authUser.uid,
+        uid: authUser.uid,
+        name: userData.name || "Unknown",
+        role: userData.role || "-",
+        loginTime: new Date().toLocaleString(),
+        logoutTime: null,
+        status: "Logged In",
+        createdAt: serverTimestamp()
+      });
+
+      // 🔐 STORE ACTIVE LOG ID
+      localStorage.setItem("activeLoginLogId", docRef.id);
+    }
+
+    function normalize(v) {
+      return String(v || "").trim().toLowerCase();
+    }
+
+    /* ================= ROLE ROUTING ================= */
+    function routeTo(role) {
+      role = normalize(role);
+
+      if (role === "superadmin") return location.href = "SuperAdminUI.html";
+      if (role === "admin" || role === "osa") return location.href = "AdminUI1.html";
+      if (role === "guidance") return location.href = "GuidanceDashboard.html";
+      if (role === "clinic") return location.href = "ClinicDashboard.html";
+
+      showError("Unauthorized role.");
+    }
+
+    /* ================= LOGIN ================= */
+    $("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showError("");
+
+      const username = $("username").value.trim();
+      const password = $("password").value.trim();
+      if (!username || !password) return showError("Fill in all fields.");
+
+      let email = username;
+
+      try {
+        if (!username.includes("@")) {
+          const mapSnap = await getDoc(doc(db, "usernames", username));
+          if (!mapSnap.exists()) {
+            await logFailedAttempt(username);
+            return showError("Username not registered.");
+          }
+          email = mapSnap.data().email;
+        }
+
+        await setPersistence(
+          auth,
+          $("remember").checked
+            ? browserLocalPersistence
+            : browserSessionPersistence
+        );
+
+        const res = await signInWithEmailAndPassword(auth, email, password);
+        const authUser = res.user;
+
+        const userDoc = await getDoc(doc(db, "users", authUser.uid));
+        const userData = userDoc.data();
+
+        await logSuccessfulLogin(userData, authUser);
+        routeTo(userData.role);
+
+      } catch (err) {
+        console.error(err);
+        await logFailedAttempt(username);
+        showError("Login failed.");
+      }
+    });
+
+    /* ================= FORGOT PASSWORD ================= */
+    $("forgot-link").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = $("username").value.trim();
+      if (!email.includes("@")) return showError("Enter email first.");
+      await sendPasswordResetEmail(auth, email);
+      showError("Reset email sent.");
+    });
+  </script>
+
+  <script>
+    function togglePassword() {
+      const f = document.getElementById("password");
+      f.type = f.type === "password" ? "text" : "password";
+    }
+  </script>
+
+</body>
+</html>

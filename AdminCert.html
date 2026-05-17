@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin • Certifications (Good Moral Requests)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="AdminCert.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='AdminUI1.html'">Home</button>
+    <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+    <button onclick="window.location.href='AdminVio.html'">Violations</button>
+    <button class="active" onclick="window.location.href='AdminCert.html'">Certifications</button>
+    <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+    <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+    <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="top-controls">
+  <div class="filter-left">
+
+    <div class="filter-container">
+      <select id="status-filter">
+        <option value="All">All</option>
+        <option value="Pending">Pending</option>
+        <option value="Approve">Approve</option>
+        <option value="Rejected">Rejected</option>
+      </select>
+    </div>
+
+    <!-- Date range filter -->
+    <div>
+      <select id="range-filter" aria-label="Date range filter">
+        <option value="All">All dates</option>
+        <option value="Day">Day</option>
+        <option value="Week">Week</option>
+        <option value="Month">Month</option>
+      </select>
+    </div>
+
+  </div>
+
+      <div class="search-container" style="margin-left: 100px;">
+        <input id="search" type="text" placeholder="Search name / ID / course…">
+      </div>
+    </div>
+
+    <!-- Table wrapper (only table scrolls) -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Student Name</th>
+            <th>Student ID</th>
+            <th>Course/Year</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Action</th>
+            <th>Generate</th>
+          </tr>
+        </thead>
+        <tbody id="certBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- View Modal -->
+<div id="viewModal" class="modal hidden" style="align-items:flex-start;">
+  <div class="modal-box modal-wide" role="dialog" aria-modal="true">
+    <button id="closeModal" class="modal-close">&times;</button>
+
+    <h2 class="modal-title">Student Details</h2>
+
+    <div class="modal-grid">
+      <div class="modal-item">
+        <span class="label">Name</span>
+        <span id="modal-name" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Student ID</span>
+        <span id="modal-id" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Course / Year</span>
+        <span id="modal-course" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Status</span>
+        <span id="modal-status" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Document Type</span>
+        <span id="modal-docType" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Purpose</span>
+        <span id="modal-purpose" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Office</span>
+        <span id="modal-office" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Mode of Release</span>
+        <span id="modal-release" class="value"></span>
+      </div>
+
+      <div class="modal-item">
+        <span class="label">Preferred Date</span>
+        <span id="modal-prefDate" class="value"></span>
+      </div>
+
+      <div class="modal-item full">
+        <span class="label">Notes</span>
+        <span id="modal-notes" class="value"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Approve confirmation modal -->
+  <div id="approveModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3 style="margin:0 0 8px 0;">Confirm Approval</h3>
+      <p id="approveMessage">Are you sure you want to approve this request?</p>
+      <div class="modal-actions">
+        <button id="approveCancel" class="btn btn-secondary">Cancel</button>
+        <button id="approveConfirm" class="btn btn-primary">Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject modal with remarks -->
+  <div id="rejectModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3 style="margin:0 0 8px 0;">Reject Request — Remarks</h3>
+      <p style="margin:0 0 8px 0;">Please provide a reason for rejecting this request:</p>
+      <textarea id="rejectReason" placeholder="Type rejection remarks (required)"></textarea>
+      <div class="modal-actions">
+        <button id="rejectCancel" class="btn btn-secondary">Cancel</button>
+        <button id="rejectConfirm" class="btn btn-danger">Reject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout modal (kept) -->
+  <div id="modalOverlay" style="display:none; position:fixed; inset:0; background-color:rgba(0,0,0,.5); justify-content:center; align-items:center; z-index:999;">
+    <div style="background:#fff; padding:30px; border-radius:10px; width:300px; text-align:center;">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="margin-top:20px;">
+        <button onclick="logoutNow()" style="background-color:#fdb827; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Yes</button>
+        <button onclick="closeModal()" style="background-color:#ccc; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-left:10px;">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cap modal (kept) -->
+  <div id="capModal" class="modal hidden">
+    <div class="modal-box">
+      <button id="capClose" style="float:right;border:none;background:transparent;font-size:20px;cursor:pointer;">&times;</button>
+      <h3>Set Slot Capacity</h3>
+      <div class="cap-grid" style="display:flex;gap:8px;margin-top:8px;">
+        <input id="capDate" type="date">
+        <input id="capTime" type="time">
+        <input id="capValue" type="number" min="0" step="1" placeholder="Max e.g. 10">
+      </div>
+      <div class="cap-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+        <button class="btn btn-secondary" id="capCancel">Cancel</button>
+        <button class="btn btn-primary" id="capSave">Save</button>
+      </div>
+      <p style="font-size:13px;color:#555;margin-top:6px;">
+        Saved to <code>availability/&lt;YYYY-MM-DD&gt;</code> → fields <code>caps["HH:mm"]</code> and <code>slots[]</code>.
+      </p>
+    </div>
+  </div>
+
+  <!-- Firebase + Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, onSnapshot, doc,
+      getDoc, updateDoc, setDoc, orderBy
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    /* DOM */
+    const $ = id => document.getElementById(id);
+    const tbody = $("certBody");
+    const searchInput = $("search");
+    const statusFilter = $("status-filter");
+    const rangeFilter = $("range-filter");
+  
+
+    const viewModal = $("viewModal");
+    const closeModalBtn = $("closeModal");
+    const modalName = $("modal-name");
+    const modalId = $("modal-id");
+    const modalCourse = $("modal-course");
+    const modalStatus = $("modal-status");
+
+    // approve/reject modals
+    const approveModal = $("approveModal");
+    const approveMessage = $("approveMessage");
+    const approveCancel = $("approveCancel");
+    const approveConfirm = $("approveConfirm");
+
+    const rejectModal = $("rejectModal");
+    const rejectReason = $("rejectReason");
+    const rejectCancel = $("rejectCancel");
+    const rejectConfirm = $("rejectConfirm");
+
+    // cap modal DOM
+    const capModal = $("capModal");
+    const capClose = $("capClose");
+    const capCancel = $("capCancel");
+    const capSave = $("capSave");
+    const capDate = $("capDate");
+    const capTime = $("capTime");
+    const capValue = $("capValue");
+
+    const modalDocType  = $("modal-docType");
+    const modalPurpose  = $("modal-purpose");
+    const modalOffice   = $("modal-office");
+    const modalRelease  = $("modal-release");
+    const modalPrefDate = $("modal-prefDate");
+    const modalNotes    = $("modal-notes");
+
+
+    window.toggleLogout = function(){ const b=document.getElementById('logoutBtn'); b.style.display = (b.style.display==='block')?'none':'block'; }
+    window.openLogout = function(){ signOut(auth); }
+    window.logoutNow = async ()=> { await signOut(auth); window.location.href="Login.html"; }
+    window.closeModal = ()=> document.getElementById("modalOverlay").style.display="none";
+
+    /* Utilities */
+    function pick(...c){ for (const v of c){ if (v!=null && String(v).trim()!=="") return v; } return ""; }
+    function ord(n){
+      if (!n || isNaN(n)) return '—';
+      const j = n % 10, k = n % 100;
+      if (j === 1 && k !== 11) return `${n}st`;
+      if (j === 2 && k !== 12) return `${n}nd`;
+      if (j === 3 && k !== 13) return `${n}rd`;
+      return `${n}th`;
+    }
+    function courseYearLabel(a){
+      const course = pick(a.course, a.program, a.courseName);
+      const yl = pick(a.yearLevel, a.year, a.level);
+      const ystr = yl ? (isNaN(parseInt(yl,10)) ? yl : `${ord(parseInt(yl,10))} Year`) : "";
+      return [course, ystr].filter(Boolean).join(" – ");
+    }
+    function dateIdFrom(a){
+      if (typeof a.date?.toDate === "function"){
+        const d = a.date.toDate(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
+        return `${y}-${m}-${dd}`;
+      }
+      const s = pick(a.dateStr, a.date);
+      if (s && /^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      if (typeof a.createdAt?.toDate === "function"){
+        const d = a.createdAt.toDate(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0");
+        return `${y}-${m}-${dd}`;
+      }
+      return null;
+    }
+    function time24From(a){
+      const raw = (()=>{ const t=pick(a.time,a.slot,a.timeslot); if(t) return String(t).trim();
+        if (typeof a.date?.toDate === "function"){ const d=a.date.toDate(); return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+        return null; })();
+      if (!raw) return null;
+      let m = raw.match(/(\d{1,2})(?::(\d{2})(?::\d{2})?)?\s*(AM|PM)?/i);
+      if (!m) return null;
+      let hh=parseInt(m[1],10), mm=parseInt(m[2]??"0",10); const mer=m[3]?m[3].toUpperCase():null;
+      if(mer==="AM" && hh===12) hh=0; if(mer==="PM" && hh!==12) hh+=12;
+      return `${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}`;
+    }
+    function to12h(hhmm){
+      if (!hhmm) return "—";
+      const [H,M]=hhmm.split(":").map(n=>parseInt(n,10));
+      const h12=((H+11)%12)+1; const ampm=H>=12?"PM":"AM";
+      return `${h12}:${String(M||0).padStart(2,"0")} ${ampm}`;
+    }
+    function fmtSlot(dateId, time24){
+      if (!dateId || !time24) return "—";
+      const [y,m,d] = dateId.split("-");
+      return `${d}/${m}/${y} • ${to12h(time24)}`;
+    }
+
+    // build default enrollment sentence using gender & optional lastEnrolled field
+    function buildEnrollmentSentence(studentRecord) {
+      // studentRecord may include: gender, lastEnrolled, program, year, level
+      const g = (pick(studentRecord.gender, studentRecord.sex, studentRecord.Gender, "") || "").toString().trim().toLowerCase();
+      let pronoun = "They";
+      if (["female","f","woman","girl"].includes(g)) pronoun = "She";
+      else if (["male","m","man","boy"].includes(g)) pronoun = "He";
+
+      const enrolled = pick(studentRecord.lastEnrolled, studentRecord.last_enrolled, "January, 2025");
+      const yearStr = pick(studentRecord.yearText, studentRecord.courseYear, studentRecord.program) || "first year student in the program Bachelor of Science in Information Technology";
+
+      return `${pronoun} was last enrolled in ${enrolled} as a ${yearStr}.`;
+    }
+
+    // OPEN certificate.html with params (safer & easier than writing full HTML string)
+    function generateCertificate(row) {
+      // prepare values
+      const name = pick(row.name, row.studentName, "");
+      const gender = pick(row.gender, row.sex, row.Gender, row.Sex, "");
+      // if Firestore has a lastEnrolled or last_enrolled field, include it when available:
+      const lastEnrolled = pick(row.lastEnrolled, row.last_enrolled, row.enrolled, "");
+      // program/year text (prefer courseYear computed earlier)
+      const programText = pick(row.courseYear, row.course, row.program, "");
+      // enrollment sentence default (OSA can still edit inside certificate page)
+      const enrollment = buildEnrollmentSentence({ gender, lastEnrolled, courseYear: programText });
+
+      const params = new URLSearchParams();
+      params.set('name', name);
+      params.set('gender', gender);
+      params.set('enroll', enrollment);
+      params.set('program', programText);
+
+      // open certificate.html in a new tab
+      const url = `certificate.html?${params.toString()}`;
+      // open via user click (should avoid popup blockers)
+      window.open(url, '_blank', 'noopener');
+    }
+
+    /* State */
+    let rows = [];      // all goodMoralRequest docs mapped
+    let capsByDate = {}; // availability documents per date
+    let capUnsubs = {};
+    let unsub = null;
+
+    // current action context for approve/reject
+    let currentAction = { id: null, name: null };
+
+    // map statuses to chip classes
+    function statusClassFrom(label){
+      const v = String(label||"").toLowerCase();
+      if (v === "approve" || v === "approved" || v === "resolved") return "status-resolved";
+      if (v === "rejected" || v === "escalated") return "status-escalated";
+      return "status-pending";
+    }
+
+    // helpers for range checks
+    function parseDateId(dateId){
+      if (!dateId) return null;
+      const parts = String(dateId).split("-");
+      if (parts.length !== 3) return null;
+      return new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+    }
+    function startOfWeek(d){
+      const day = d.getDay();
+      const diff = (day === 0) ? -6 : (1 - day);
+      const s = new Date(d); s.setDate(d.getDate() + diff); s.setHours(0,0,0,0);
+      return s;
+    }
+    function endOfWeek(d){
+      const s = startOfWeek(d);
+      const e = new Date(s); e.setDate(s.getDate() + 6); e.setHours(23,59,59,999);
+      return e;
+    }
+    function startOfMonth(d){
+      const s = new Date(d.getFullYear(), d.getMonth(), 1); s.setHours(0,0,0,0); return s;
+    }
+    function endOfMonth(d){
+      const e = new Date(d.getFullYear(), d.getMonth()+1, 0); e.setHours(23,59,59,999); return e;
+    }
+
+    // determines if a given dateId falls within currently selected range
+    function isDateInRange(dateId){
+      const rf = (rangeFilter && rangeFilter.value) ? rangeFilter.value : "All";
+      if (!dateId) return rf === "All";
+      if (rf === "All") return true;
+      const dt = parseDateId(dateId);
+      if (!dt) return false;
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (rf === "Day") {
+        const t = new Date(); t.setHours(0,0,0,0);
+        return dt.getFullYear() === t.getFullYear() && dt.getMonth() === t.getMonth() && dt.getDate() === t.getDate();
+      } else if (rf === "Week") {
+        const s = startOfWeek(today);
+        const e = endOfWeek(today);
+        return dt >= s && dt <= e;
+      } else if (rf === "Month") {
+        const s = startOfMonth(today);
+        const e = endOfMonth(today);
+        return dt >= s && dt <= e;
+      }
+      return true;
+    }
+
+    // display rows
+    function render(){
+
+  const q = (searchInput.value || "").toLowerCase();
+  const f = statusFilter.value;
+  
+
+  const visible = rows.filter(r=>{
+
+    const hay = `${r.name} ${r.studentId} ${r.courseYear} ${r.status}`.toLowerCase();
+
+    const okS = !q || hay.includes(q);
+
+    const okF = (f==="All") || (String(r.status||"").toLowerCase().startsWith(f.toLowerCase()));
+
+    const okRange = isDateInRange(r.dateId);
+
+
+
+    return okS && okF && okRange;
+
+  });
+
+  tbody.innerHTML = "";
+
+  if (!visible.length){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="7" style="text-align:center;color:#6b7280;padding:12px">No requests found.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  visible.forEach(r=>{
+
+  const tr = document.createElement("tr");
+
+  const tdName = document.createElement("td");
+  tdName.textContent = r.name || "—";
+
+  const tdId = document.createElement("td");
+  tdId.textContent = r.studentId || "—";
+
+  const tdCY = document.createElement("td");
+  tdCY.textContent = r.courseYear || "—";
+
+  const tdDate = document.createElement("td");
+  tdDate.textContent = r.dateId || "—";
+
+  const tdStatus = document.createElement("td");
+  const chip = document.createElement("span");
+
+  const label = r.status || "Pending";
+
+  chip.className = `status-chip ${statusClassFrom(label)}`;
+  chip.textContent = label;
+
+  tdStatus.appendChild(chip);
+
+  const tdAct = document.createElement("td");
+
+  const status = String(r.status || "Pending").toLowerCase();
+
+  let actionsHTML = `
+    <div class="dropdown">
+      <button class="dropdown-btn">Action ▼</button>
+      <div class="dropdown-content">
+        <div data-act="view">View</div>
+  `;
+
+  if (status === "pending") {
+    actionsHTML += `
+      <div data-act="approve">Approve</div>
+      <div data-act="reject">Reject</div>
+    `;
+  } 
+  else if (status === "approve" || status === "approved") {
+    actionsHTML += `
+      <div data-act="reject">Reject</div>
+    `;
+  }
+
+  actionsHTML += `
+      </div>
+    </div>
+  `;
+
+  tdAct.innerHTML = actionsHTML;
+
+  const tdGen = document.createElement("td");
+
+  const isApproved = statusClassFrom(label) === "status-resolved";
+
+  if (isApproved) {
+
+    const btnGen = document.createElement("button");
+
+    btnGen.className = "generate-btn";
+    btnGen.textContent = "Generate";
+
+    btnGen.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      generateCertificate(r);
+    });
+
+    tdGen.appendChild(btnGen);
+
+  } 
+  else {
+
+    const btnGen = document.createElement("button");
+
+    btnGen.className = "generate-btn";
+    btnGen.textContent = "Generate";
+    btnGen.disabled = true;
+
+    tdGen.appendChild(btnGen);
+
+  }
+
+  tr.append(tdName, tdId, tdCY, tdDate, tdStatus, tdAct, tdGen);
+  tbody.appendChild(tr);
+
+  /* DROPDOWN FUNCTIONALITY (FIXED LOCATION) */
+
+  const drop = tdAct.querySelector(".dropdown");
+  const btn = drop.querySelector(".dropdown-btn");
+
+  btn.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    document.querySelectorAll(".dropdown").forEach(d=>{
+      if(d!==drop) d.classList.remove("show");
+    });
+    drop.classList.toggle("show");
+  });
+
+  drop.querySelectorAll(".dropdown-content div").forEach(item=>{
+
+    item.addEventListener("click", async ()=>{
+
+      drop.classList.remove("show");
+
+      const act = item.getAttribute("data-act");
+
+      if (act === "view") {
+
+        modalName.textContent = r.name || "—";
+        modalId.textContent = r.studentId || "—";
+        modalCourse.textContent = r.courseYear || "—";
+        modalStatus.textContent = r.status || "Pending";
+
+        modalDocType.textContent = r.documentType || "—";
+        modalPurpose.textContent = r.purpose || "—";
+        modalOffice.textContent = r.office ? r.office.toUpperCase() : "—";
+        modalRelease.textContent = r.modeOfRelease || "—";
+        modalPrefDate.textContent = r.preferredDate || "—";
+        modalNotes.textContent = r.notes || "—";
+
+        viewModal.classList.remove("hidden");
+        return;
+
+      }
+
+      if (act === "approve"){
+
+        currentAction.id = r.id;
+        currentAction.name = r.name || "the student";
+
+        approveMessage.textContent =
+        `Are you sure you want to approve this request (from ${currentAction.name})?`;
+
+        approveModal.classList.remove("hidden");
+        return;
+
+      }
+
+      if (act === "reject"){
+
+        currentAction.id = r.id;
+        currentAction.name = r.name || "the student";
+
+        rejectReason.value = "";
+
+        rejectModal.classList.remove("hidden");
+
+        setTimeout(()=>rejectReason.focus(),60);
+
+        return;
+
+      }
+
+    });
+
+  });
+
+});
+    }
+
+    // Approve modal handlers
+    approveCancel.addEventListener("click", ()=> {
+      currentAction.id = null; currentAction.name = null;
+      approveModal.classList.add("hidden");
+    });
+    approveConfirm.addEventListener("click", async ()=> {
+      const id = currentAction.id;
+      if (!id) { approveModal.classList.add("hidden"); return; }
+      try {
+        await updateDoc(doc(db, "goodMoralRequest", id), { status: "Approve" });
+      } catch (e) {
+        console.error("Approve failed", e);
+        alert("Failed to approve request.");
+      } finally {
+        currentAction.id = null; currentAction.name = null;
+        approveModal.classList.add("hidden");
+      }
+    });
+
+    // Reject modal handlers
+    rejectCancel.addEventListener("click", ()=> {
+      currentAction.id = null; currentAction.name = null;
+      rejectReason.value = "";
+      rejectModal.classList.add("hidden");
+    });
+    rejectConfirm.addEventListener("click", async ()=> {
+      const id = currentAction.id;
+      const reason = (rejectReason.value || "").trim();
+      if (!id) { rejectModal.classList.add("hidden"); return; }
+      if (!reason) { alert("Please provide rejection remarks."); rejectReason.focus(); return; }
+      try {
+        await updateDoc(doc(db, "goodMoralRequest", id), { status: "Rejected", rejectionRemark: reason, rejectedAt: new Date() });
+      } catch (e) {
+        console.error("Reject failed", e);
+        alert("Failed to reject request.");
+      } finally {
+        currentAction.id = null; currentAction.name = null;
+        rejectReason.value = "";
+        rejectModal.classList.add("hidden");
+      }
+    });
+
+    // close dropdowns
+    document.addEventListener("click", ()=> { document.querySelectorAll(".dropdown").forEach(d=>d.classList.remove("show")); });
+
+    // modal handlers for view modal
+    if (closeModalBtn) closeModalBtn.addEventListener("click", ()=> viewModal.classList.add("hidden"));
+    window.addEventListener("click", (e)=> { if(e.target === viewModal) viewModal.classList.add("hidden"); });
+
+    // cap modal safe guards
+    const closeCap = ()=> capModal.classList.add("hidden");
+    if (capClose) capClose.addEventListener("click", closeCap);
+    if (capCancel) capCancel.addEventListener("click", closeCap);
+    window.addEventListener("click", (e)=>{ if(e.target===capModal) closeCap(); });
+
+    if (capSave) capSave.addEventListener("click", async ()=>{
+      const dateId = (capDate.value||"").trim();
+      const time24 = (capTime.value||"").trim();
+      const capNum = parseInt(capValue.value, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateId) || !/^\d{2}:\d{2}$/.test(time24) || isNaN(capNum) || capNum<0){
+        alert("Please enter a valid date, time, and non-negative cap.");
+        return;
+      }
+      try{
+        const ref = doc(db, "availability", dateId);
+        await setDoc(ref, { dateStr: dateId, caps: { [time24]: capNum } }, { merge: true });
+        closeCap();
+      }catch(err){
+        console.error(err);
+        alert(`Failed to save cap:\n${err?.code||""} ${err?.message||err}`);
+      }
+    });
+
+    function watchCapsForDates(){
+      const dateSet = new Set(rows.map(r=>r.dateId).filter(Boolean));
+      dateSet.forEach(did=>{
+        if (capUnsubs[did]) return;
+        const ref = doc(db, "availability", did);
+        capUnsubs[did] = onSnapshot(ref, snap=>{
+          const data = snap.exists() ? (snap.data()||{}) : {};
+          capsByDate[did] = data.caps || {};
+          render();
+        }, ()=>{ capsByDate[did] = {}; render(); });
+      });
+      Object.keys(capUnsubs).forEach(did=>{
+        if (!dateSet.has(did)){
+          try{ capUnsubs[did](); }catch{}
+          delete capUnsubs[did];
+          delete capsByDate[did];
+        }
+      });
+    }
+
+    // listener for goodMoralRequest
+    function startListener(){
+  const qRef = query(collection(db, "goodMoralRequest"), orderBy("createdAt", "desc"));
+  if (unsub) unsub();
+
+  unsub = onSnapshot(qRef, (snap)=>{
+    rows = snap.docs.map(d=>{
+      const a = d.data();
+
+      const name = pick(
+        a.studentName, a.name,
+        (a.lastName && a.firstName) ? `${a.lastName}, ${a.firstName}` : null
+      );
+
+      const studentId = pick(a.studentID, a.studentId, a.idNumber, a.sid);
+      const courseYear = pick(a.courseYear, courseYearLabel(a));
+      const status = pick(a.status, "Pending");
+      const dateId = dateIdFrom(a);
+      const time24 = time24From(a);
+      const createdAt = a.createdAt || null;
+
+      return {
+        id: d.id,
+        name,
+        studentId,
+        courseYear,
+        status,
+        dateId,
+        time24,
+        createdAt,
+
+        documentType: a.documentType || "",
+        purpose: a.purpose || "",
+        office: a.office || "",
+        modeOfRelease: a.modeOfRelease || "",
+        preferredDate: a.preferredDate || "",
+        notes: a.notes || "",
+
+        gender: pick(a.gender, a.sex, a.Gender, a.Sex) || "",
+        lastEnrolled: pick(a.lastEnrolled, a.last_enrolled, a.enrolled) || ""
+      };
+    });
+
+    watchCapsForDates();
+    render();
+  }, (err)=>{
+    console.error(err);
+    alert(`Failed to load requests:\n${err?.code||""} ${err?.message||err}`);
+  });
+}
+
+
+    // wire up search & filter UI
+    if (searchInput) searchInput.addEventListener("input", render);
+    if (statusFilter) statusFilter.addEventListener("change", render);
+    if (rangeFilter) rangeFilter.addEventListener("change", render);
+
+    onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "users", user.uid));
+  } catch (err) {
+    console.error("Failed to load user profile:", err);
+    // ❌ DO NOT LOGOUT
+    return;
+  }
+
+  if (!snap.exists()) {
+    console.warn("User profile missing");
+    // ❌ DO NOT LOGOUT
+    return;
+  }
+
+  const role = (snap.data().role || "").toLowerCase();
+
+  // ✅ allow ADMIN and OSA only
+  if (!["admin", "osa"].includes(role)) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  // ✅ SAFE: user stays logged in
+  try {
+    startListener();
+  } catch (err) {
+    console.error("Failed to start Firestore listeners:", err);
+    // ❌ DO NOT LOGOUT
+  }
+});
+
+  </script>
+</body>
+</html>

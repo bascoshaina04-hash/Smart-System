@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Security Logs – SMART</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#fff;display:flex;min-height:100vh;overflow:hidden}
+h2{font-family:Genos;font-size:50px;color:#fff; margin-bottom: 37px;}
+h3{font-family:Genos}
+
+/* Sidebar */
+    .sidebar{background:#020120;width:265px;padding:20px;color:#fff;flex-shrink:0;}
+    .logo{display:flex;align-items:center;margin-bottom:20px}
+    .logo img{width:70px;margin-right:10px;margin-top:-50px;object-fit:contain; margin-left: -10px;}
+
+.sidebar button{
+      background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;
+      width:95%;margin-bottom:10px;font-weight:700;cursor:pointer;border-radius:8px;
+      text-align:center;position:relative;margin-left:5px; 
+    }
+    .sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+
+.main-content{
+  flex:1;
+  overflow:hidden;
+}
+
+.header{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  background:#020120;
+  height:97px;
+  padding:0 30px
+}
+
+.user-container{position:relative}
+.user-icon-container{
+  width:50px;height:50px;background:#ccc;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer
+}
+.user-icon-container img{width:40px;height:40px;border-radius:50%}
+
+.logout{
+  display:none;position:absolute;top:60px;right:0;
+  background:#fdb827;color:#000;padding:8px 12px;
+  border-radius:6px;border:none;cursor:pointer;font-weight:600
+}
+
+.section-title{margin:20px 0 10px 65px;font-size:28px}
+
+/* ===== SECURITY ALERTS ===== */
+.alert-box{
+  background:#2D52DE;
+  padding:20px;
+  border-radius:14px;
+  width:90%;
+  margin-left:65px;
+  max-height:215px;
+  overflow-y:auto;
+}
+
+.alert-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.alert-item{
+  background:#fff;
+  padding:14px;
+  border-radius:10px;
+  font-size:14px;
+  line-height:1.4;
+}
+
+/* ===== TABLE ===== */
+.table-wrap{
+  width:90%;
+  height:250px;   
+  margin-left:65px;
+  margin-bottom:25px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.08);
+  overflow:hidden;
+}
+
+/* fixed-height scrollable table */
+.table-scroll{
+  height:250px;              /* ✅ EXACTLY 5 ROWS */
+  overflow-y:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+thead{
+  background:#273ea3;
+  color:#fff;
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+
+thead th{
+  padding:14px 16px;
+  font-size:14px;
+}
+
+tbody td{
+  padding:12px;
+  border-bottom:1px solid #ddd;
+}
+
+tbody tr:nth-child(even){background:#f1f1f1}
+
+.status{
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.status.logged-in{
+  background:#dcfce7;
+  color:#166534;
+}
+
+.status.logged-out{
+  background:#fee2e2;
+  color:#991b1b;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="logo">
+    <img src="icons/FInalLogo.png">
+    <h2>Smart</h2>
+  </div>
+  <button onclick="location.href='SuperAdminUI.html'">Accounts</button>
+  <button class="active" onclick="location.href='SecurityLogs.html'">Activity Logs</button>
+</div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="user-container">
+      <div class="user-icon-container" onclick="toggleLogout()">
+        <img src="icons/user-icon.png">
+      </div>
+      <button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+    </div>
+  </div>
+
+  <h3 class="section-title">Security Alerts</h3>
+  <div class="alert-box">
+    <div id="alertsList" class="alert-grid"></div>
+  </div>
+
+  <h3 class="section-title">Login / Logout Activity Log</h3>
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Login Time</th>
+            <th>Logout Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="casebody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:#fff;padding:25px;border-radius:10px;width:320px;text-align:center">
+    <h3>Confirm Logout</h3>
+    <p>Are you sure?</p>
+    <div style="margin-top:18px">
+      <button onclick="logoutYes()" style="background:#fdb827;padding:8px 16px;border:none;border-radius:6px">Yes</button>
+      <button onclick="closeLogout()" style="margin-left:10px;padding:8px 16px">No</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import {
+  getFirestore, collection, onSnapshot
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey:"AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+  authDomain:"smart-723de.firebaseapp.com",
+  projectId:"smart-723de"
+});
+
+const db = getFirestore(app);
+const alertsList = document.getElementById("alertsList");
+const tbody = document.getElementById("casebody");
+
+/* ✅ FETCH ALL SECURITY ALERTS (NO LIMIT) */
+onSnapshot(collection(db,"security_alerts"), snap=>{
+  alertsList.innerHTML="";
+  snap.forEach(d=>{
+    const x=d.data();
+    alertsList.innerHTML+=`
+      <div class="alert-item">
+        <b>${x.timestamp?.toDate().toLocaleString()||""}</b><br>
+        ${x.message}<br>
+        <b>User:</b> ${x.userID}
+      </div>`;
+  });
+});
+
+onSnapshot(collection(db, "login_logs"), snap => {
+  const rows = [];
+
+  snap.forEach(docSnap => {
+    rows.push({ id: docSnap.id, ...docSnap.data() });
+  });
+
+  rows.sort((a, b) => {
+  const ta = a.createdAt?.seconds || 0;
+  const tb = b.createdAt?.seconds || 0;
+  return tb - ta; // newest first
+});
+
+
+  tbody.innerHTML = "";
+
+  rows.forEach(d => {
+
+    // ✅ NORMALIZE logoutTime
+    let logoutTimeDisplay = "-";
+
+    if (d.logoutTime) {
+      if (typeof d.logoutTime === "string") {
+        logoutTimeDisplay = d.logoutTime;
+      }
+      else if (d.logoutTime.toDate) {
+        // Firestore Timestamp
+        logoutTimeDisplay = d.logoutTime.toDate().toLocaleString();
+      }
+    }
+
+    // ✅ NORMALIZE loginTime too (just in case)
+    let loginTimeDisplay = "-";
+    if (d.loginTime) {
+      if (typeof d.loginTime === "string") {
+        loginTimeDisplay = d.loginTime;
+      }
+      else if (d.loginTime.toDate) {
+        loginTimeDisplay = d.loginTime.toDate().toLocaleString();
+      }
+    }
+
+    const statusClass =
+      d.status === "Logged Out" ? "logged-out" : "logged-in";
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${d.userID || "-"}</td>
+        <td>${d.name || "-"}</td>
+        <td>${d.role || "-"}</td>
+        <td>${loginTimeDisplay}</td>
+        <td>${logoutTimeDisplay}</td>
+        <td>
+          <span class="status ${statusClass}">
+            ${d.status || "Logged In"}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+});
+
+
+/* UI */
+window.toggleLogout=()=> {
+  const b=document.getElementById("logoutBtn");
+  b.style.display=b.style.display==="block"?"none":"block";
+};
+window.openLogout=()=>document.getElementById("modalOverlay").style.display="flex";
+window.closeLogout=()=>document.getElementById("modalOverlay").style.display="none";
+</script>
+
+</body>
+</html>

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Guidance • Consultations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+/* ===== CSS - unchanged from your file ===== */
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+h2{font-family:Genos,sans-serif;font-size:50px;margin-bottom:13px}
+
+/* Prevent page-level scrolling; only table-wrapper will scroll */
+html,body{height:100vh;overflow:hidden}
+body{background:#fff;display:flex}
+
+/* Sidebar */
+.sidebar{background:#020120;width:255px;padding:20px;color:#fff;flex-shrink:0}
+.logo{display:flex;align-items:center;margin-bottom:20px}
+.logo img{width:70px;margin-right:10px;margin-top:-20px}
+.sidebar button{
+  background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;width:95%;
+  margin-bottom:10px;font-weight:bold;cursor:pointer;border-radius:8px;text-align:center;position:relative;margin-left:5px
+}
+.sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+
+/* Main and header */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.header{background:#020120;color:#fff;height:97px;display:flex;align-items:center;justify-content:flex-end;padding:0 24px;flex-shrink:0}
+.user-container{position:relative}
+.user-icon-container{width:46px;height:46px;border-radius:50%;background:#ccc;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.user-icon-container img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.logout{position:absolute;top:60px;right:0;background:#fdb827;padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;display:none;z-index:10}
+
+/* Content area padding aligns title with table left edge */
+.content{padding:18px 24px 24px 0;flex:1;display:flex;flex-direction:column}
+.page-title{font-family:Genos,sans-serif;font-size:32px;margin: 12px 0 -10px 110px;color:#111}
+
+/* Tool row: New button left; search aligned to the right of the table area */
+.tool-row{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%}
+.left-tools{display:flex;gap:10px;align-items:center}
+.right-tools{display:flex;align-items:center; margin-right: 145px;}
+.search{padding:8px 12px;border-radius:8px;border:1px solid #ccc;width:300px}
+
+/* Buttons */
+.btn{padding:6px 12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+.btn-primary{background:#fdb827;color:#000; margin-left: 110px;}
+.btn-secondary{background:#e6e6e6;color:#333}
+
+/* ===== TABLE WRAPPER (scroll + rounded corners) ===== */
+.table-wrapper{
+  width: calc(80% - 0px);
+  max-height: 460px;
+  border-radius:12px;
+  overflow:auto;
+  background:#fff;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+  margin-top:14px;
+  margin-left: 110px;
+}
+
+/* Inner table appearance (no outer black border) */
+.table-wrapper table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  min-width:740px;
+}
+thead{background:#273ea3;color:#fff;position:sticky;top:0;z-index:2}
+th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee;overflow-wrap:break-word}
+tbody tr:hover{background:#f7f9ff}
+
+/* Column widths */
+th:nth-child(1),td:nth-child(1){width:28%}
+th:nth-child(2),td:nth-child(2){width:22%}
+th:nth-child(3),td:nth-child(3){width:24%}
+th:nth-child(4),td:nth-child(4){width:18%}
+
+/* Dropdown Action (now the transient floating menu will appear) */
+.dropdown{position:relative;display:inline-block}
+.dropdown-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:#fdb827;
+  color:#111;
+  padding:6px 10px;
+  border-radius:8px;
+  font-weight:700;
+  border:1px solid rgba(0,0,0,0.06);
+  cursor:pointer;
+  box-shadow:0 2px 6px rgba(3,8,20,0.06);
+  user-select:none;
+  white-space:nowrap;
+  font-size:0.95rem;
+}
+
+/* transient floating menu styling (appended to body) */
+.floating-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(8,22,50,0.12);
+  min-width: 160px;
+  z-index: 120000;
+  padding:6px;
+}
+.floating-menu .menu-item {
+  padding: 9px 12px;
+  font-weight:600;
+  color:#1b2b3b;
+  cursor:pointer;
+  border-radius:6px;
+  margin: 4px 2px;
+  user-select:none;
+}
+.floating-menu .menu-item:hover { background:#f4f7ff; }
+
+/* empty row */
+.empty{color:#666;text-align:center;padding:18px}
+
+/* Modal (new consultation) */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;align-items:center;justify-content:center}
+.modal.show { display:flex; }
+.card{
+  background:#0b0c2e;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);
+  width:820px;padding:18px 22px;color:#fff;
+}
+.card h2{font-family:Genos,sans-serif;text-align:center;margin:6px 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.field{display:flex;flex-direction:column}
+.label{font-size:12px;margin-bottom:6px;opacity:.9}
+.input, .select, .textarea{
+  width:100%;border:none;border-radius:8px;padding:10px;background:#fff;color:#000;
+}
+.textarea{height:90px;resize:vertical}
+.row{display:flex;gap:12px;margin-top:14px}
+.row .btn{flex:1;height:40px}
+.ghost{opacity:.6}
+
+/* AUTOCOMPLETE SUGGESTIONS (modal) */
+.suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(12,30,60,0.08);
+  border: 1px solid #e6e6e6;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  z-index: 99999;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.suggestions.hidden { display: none; }
+.suggestions li { padding: 8px 12px; cursor: pointer; font-weight:600; display:flex; justify-content:space-between; gap:8px; align-items:center; color:#222; }
+.suggestions li:hover { background:#f4f7ff; color:#0b3b66; }
+.sugg-meta { font-weight:500; color:#666; font-size:0.9rem; }
+
+/* small modal card (used for logout and delete confirm) */
+.card-small {
+  background:#fff;
+  color:#111;
+  padding:18px;
+  width:420px;
+  border-radius:10px;
+  box-shadow:0 12px 30px rgba(8,22,50,0.12);
+}
+#deleteConfirm .card-small { background:#fff; color:#111; }
+#deleteConfirm .btn-danger { background:#d32f2f; color:#fff; border:none; }
+
+/* Responsive */
+@media (max-width:900px){
+  .table-wrapper{max-height:360px}
+  .card{width:calc(100% - 40px)}
+  .search{width:180px}
+}
+
+/* ---------- ADDED STYLES for compact View Details Modal (kept exactly as your provided styles) ---------- */
+#viewDetailsModal { z-index: 140000; }
+#viewDetailsModal .card {
+  background: #fff;
+  color: #111;
+  width: 480px;
+  max-width: calc(100% - 40px);
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(3,8,20,0.25);
+  overflow-y: auto;
+}
+#viewDetailsBody { padding-top: 12px; }
+#viewDetailsBody .detail-row { display:flex; gap:12px; margin:10px 0; align-items:flex-start; }
+#viewDetailsBody .detail-label { min-width:120px; font-weight:800; color:#111; }
+#viewDetailsBody .detail-value { flex:1; color:#222; font-weight:700; }
+#viewDetailsBody .muted { color:#666; font-weight:600; }
+@media (max-width:520px){
+  #viewDetailsModal .card { width: calc(100% - 32px); padding:16px; }
+  #viewDetailsBody .detail-label { min-width:100px; font-size:14px; }
+  #viewDetailsBody .detail-value { font-size:14px; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo">
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button onclick="location.href='GuidanceExit.html'">Exit Interview</button>
+    <button onclick="location.href='GuidanceAppoint.html'">Appointments</button>
+    <button class="active" onclick="location.href='GuidanceConsult.html'">Consultations</button>
+    <button onclick="location.href='GuidanceAnn.html'">Announcements</button>
+    <button onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <div class="main">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon">
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogoutConfirm()">Logout</button>
+      </div>
+    </div>
+
+    <h1 class="page-title">Consultation Management</h1>
+
+    <div class="content">
+      <div class="tool-row">
+        <div class="left-tools">
+          <button id="newBtn" class="btn btn-primary">＋ New Consultation</button>
+        </div>
+
+        <div class="right-tools">
+          <input id="search" class="search" type="text" placeholder="Search student / concern…">
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Student ID</th>
+              <th>Concern</th>
+              <th style="width:160px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== New Consultation Modal (also used for View) ===== -->
+  <div id="modal" class="modal" aria-hidden="true" style="display:none;">
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">New Consultation</h2>
+      <div class="grid">
+        <div class="field" style="position:relative;">
+          <label class="label">Student Name</label>
+          <input id="f_studentName" class="input" placeholder="Enter Student Name" autocomplete="off">
+          <ul id="studentSuggestions" class="suggestions hidden" aria-hidden="true"></ul>
+        </div>
+        <div class="field">
+          <label class="label">Student ID</label>
+          <input id="f_studentID" class="input" placeholder="Enter Student ID">
+        </div>
+        <div class="field">
+          <label class="label">Course & Year</label>
+          <input id="f_courseYear" class="input" placeholder="Enter Course & Year">
+        </div>
+        <div class="field">
+          <label class="label">Contact (Mobile)</label>
+          <input id="f_contact" class="input" placeholder="Mobile Number">
+        </div>
+        <div class="field">
+          <label class="label">Email</label>
+          <input id="f_email" class="input" type="email" placeholder="Enter Email">
+        </div>
+        <div class="field">
+          <label class="label">Case Title</label>
+          <input id="f_caseTitle" class="input" placeholder="Enter Case Title">
+        </div>
+        <div class="field">
+          <label class="label">Case Opened</label>
+          <input id="f_openedAt" class="input ghost" disabled>
+        </div>
+        <div class="field">
+          <label class="label">Concern</label>
+          <textarea id="f_notes" class="textarea" placeholder="Enter Notes"></textarea>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="modalCloseBtn" class="btn">Close</button>
+        <button id="modalSaveBtn" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Delete Confirm Modal ===== -->
+  <div id="deleteConfirm" class="modal" aria-hidden="true" style="display:none;">
+    <div class="card-small" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+      <h3 id="deleteTitle">Delete Consultation</h3>
+      <p id="deleteMessage">Are you sure you want to delete this consultation?</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout confirm modal -->
+  <div id="logoutConfirm" class="modal" style="display:none;">
+    <div class="card-small">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-secondary" onclick="closeLogoutConfirm()">No</button>
+        <button class="btn btn-primary" onclick="logoutNow()">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== View Details Modal (read-only, compact card) ===== -->
+  <div id="viewDetailsModal" class="modal" aria-hidden="true" style="display:none;">
+    <div class="card" role="dialog" aria-modal="true" aria-labelledby="viewDetailsTitle" style="max-width:720px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h2 id="viewDetailsTitle" style="margin:0;color:#12357a;font-family:Genos,sans-serif;font-size:22px;">View Consultation</h2>
+        <button id="viewCloseBtn" aria-label="Close details" style="background:transparent;border:none;color:#0b0c2e;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="height:6px;margin-top:10px;background:transparent;">
+        <div style="height:3px;background:#fdb827;width:60px;border-radius:2px;margin-top:6px"></div>
+      </div>
+
+      <div id="viewDetailsBody" style="color:#111; font-size:15px; line-height:1.45;">
+        <!-- dynamically injected -->
+      </div>
+
+      <!-- optional extra close button (kept hidden on large screens) -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+        <button id="viewCloseBtnBottom" class="btn" style="display:none">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+/* ===== JS - only behavior edits applied ===== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import {
+  getFirestore, collection, query, where, onSnapshot,
+  updateDoc, doc, addDoc, serverTimestamp, deleteDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+  authDomain: "smart-723de.firebaseapp.com",
+  projectId: "smart-723de",
+  storageBucket: "smart-723de.appspot.com",
+  messagingSenderId: "316347306734",
+  appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const rowsEl   = document.getElementById('rows');
+const searchEl = document.getElementById('search');
+
+// Modal wiring
+const modal         = document.getElementById('modal');
+const newBtn        = document.getElementById('newBtn');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+const modalSaveBtn  = document.getElementById('modalSaveBtn');
+
+const deleteConfirm = document.getElementById('deleteConfirm');
+const deleteMessage = document.getElementById('deleteMessage');
+const cancelDeleteBtn  = document.getElementById('cancelDeleteBtn');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+const viewDetailsModal = document.getElementById('viewDetailsModal');
+const viewDetailsBody  = document.getElementById('viewDetailsBody');
+const viewCloseBtn     = document.getElementById('viewCloseBtn');
+const viewCloseBtnBottom = document.getElementById('viewCloseBtnBottom');
+
+const f = (id)=>document.getElementById(id);
+
+// show/hide modal helpers (use inline style to avoid !important clashes)
+function showModal(el){ if(!el) return; el.style.display='flex'; el.setAttribute('aria-hidden','false'); }
+function hideModal(el){ if(!el) return; el.style.display='none'; el.setAttribute('aria-hidden','true'); }
+
+// modal mode
+function setModalMode(mode){
+  modal.dataset.mode = mode;
+const ids = [
+  'f_studentName',
+  'f_studentID',
+  'f_courseYear',
+  'f_contact',
+  'f_email',
+  'f_caseTitle',
+  'f_notes'
+];
+  if (mode === 'view'){
+    modalSaveBtn.style.display = 'none';
+    modalCloseBtn.textContent = 'Close';
+    ids.forEach(id=>{ const el=f(id); if(el) el.setAttribute('disabled','disabled'); });
+  } else {
+    modalSaveBtn.style.display = '';
+    modalCloseBtn.textContent = 'Cancel';
+    ids.forEach(id=>{ const el=f(id); if(el) el.removeAttribute('disabled'); });
+  }
+}
+
+function openModalCreate(){
+['f_studentName','f_studentID','f_courseYear','f_contact','f_email','f_caseTitle','f_notes']
+    .forEach(id => { const el=f(id); if(!el) return; el.value=''; });
+  f('f_openedAt').value = new Date().toLocaleString();
+  setModalMode('create');
+  modal.dataset.editingId = '';
+  showModal(modal);
+  hideSuggestions();
+}
+function openModalView(){ setModalMode('view'); showModal(modal); }
+function closeModal(){ hideModal(modal); hideSuggestions(); modal.dataset.editingId=''; }
+
+newBtn.addEventListener('click', openModalCreate);
+modalCloseBtn.addEventListener('click', closeModal);
+modal.addEventListener('click',(e)=>{ if(e.target===modal) closeModal(); });
+
+// View modal wiring
+viewCloseBtn.addEventListener('click', ()=>{ viewDetailsBody.innerHTML=''; hideModal(viewDetailsModal); });
+viewCloseBtnBottom.addEventListener('click', ()=>{ viewDetailsBody.innerHTML=''; hideModal(viewDetailsModal); });
+viewDetailsModal.addEventListener('click', (e)=>{ if (e.target === viewDetailsModal) { viewDetailsBody.innerHTML=''; hideModal(viewDetailsModal); } });
+
+// Delete confirm handlers
+let pendingDelete = { id: null, src: null, name: null, tr: null };
+function openDeleteConfirm(id, src, studentName, trElement){
+  pendingDelete = { id, src, name: studentName, tr: trElement };
+  deleteMessage.textContent = `Are you sure you want to delete this consultation from "${studentName}"?`;
+  showModal(deleteConfirm);
+}
+function closeDeleteConfirm(){ hideModal(deleteConfirm); pendingDelete = { id:null, src:null, name:null, tr:null }; }
+cancelDeleteBtn.addEventListener('click', closeDeleteConfirm);
+
+confirmDeleteBtn.addEventListener('click', async ()=>{
+  if (!pendingDelete.id || !pendingDelete.src) { closeDeleteConfirm(); return; }
+  try {
+    await deleteDoc(doc(db, pendingDelete.src, pendingDelete.id));
+    if (pendingDelete.tr && pendingDelete.tr.parentNode) pendingDelete.tr.remove();
+  } catch(e) {
+    console.error('Delete failed', e);
+    alert('Delete failed: ' + (e?.message || e));
+  } finally {
+    closeDeleteConfirm();
+  }
+});
+
+// Logout helpers
+function toggleLogout(){ const b = document.getElementById('logoutBtn'); b.style.display = (b.style.display === 'block') ? 'none' : 'block'; }
+window.toggleLogout = toggleLogout;
+function openLogoutConfirm(){ document.getElementById('logoutConfirm').style.display = 'flex'; }
+function closeLogoutConfirm(){ document.getElementById('logoutConfirm').style.display = 'none'; }
+async function logoutNow(){ try{ await signOut(auth); window.location.href = 'Login.html'; } catch(e){ alert('Logout failed: ' + (e?.message || e)); } }
+window.openLogoutConfirm = openLogoutConfirm;
+window.closeLogoutConfirm = closeLogoutConfirm;
+window.logoutNow = logoutNow;
+
+// transient floating menu creator
+let activeFloating = null;
+function createFloatingMenu(items, anchorRect){
+  if (activeFloating) activeFloating.remove(), activeFloating = null;
+  const menu = document.createElement('div');
+  menu.className = 'floating-menu';
+  items.forEach(it=>{
+    const el = document.createElement('div');
+    el.className = 'menu-item';
+    el.textContent = it.label;
+    el.tabIndex = 0;
+    el.addEventListener('click', ()=> { it.onClick(); destroy(); });
+    el.addEventListener('keydown', (e)=> { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); it.onClick(); destroy(); } });
+    menu.appendChild(el);
+  });
+  document.body.appendChild(menu);
+  // position below anchorRect
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const menuRect = menu.getBoundingClientRect();
+  let left = Math.round(anchorRect.left);
+  let top = Math.round(anchorRect.bottom + 8);
+  // adjust if overflow
+  if (left + menuRect.width > vw - 12) left = Math.max(8, vw - menuRect.width - 12);
+  if (top + menuRect.height > vh - 12) top = Math.max(8, anchorRect.top - menuRect.height - 8);
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  activeFloating = menu;
+
+  setTimeout(()=>{ // next tick so the initial click doesn't close it
+    document.addEventListener('click', outsideCloseHandler);
+    document.addEventListener('keydown', escapeCloseHandler);
+  }, 10);
+  function outsideCloseHandler(ev){
+    if (!menu.contains(ev.target)) destroy();
+  }
+  function escapeCloseHandler(ev){
+    if (ev.key === 'Escape') destroy();
+  }
+  function destroy(){
+    if (menu) menu.remove();
+    activeFloating = null;
+    document.removeEventListener('click', outsideCloseHandler);
+    document.removeEventListener('keydown', escapeCloseHandler);
+  }
+  return { destroy };
+}
+
+// helper escapeHtml
+function escapeHtml(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+// Helper to find a readable title/concern from different record shapes
+function getRecordTitle(r){ return r.caseTitle || r.concern || r.purpose || r.title || r.subject || r.purposeDetails || ''; }
+
+/* ---------- NEW: prettyDate, detailRow, openDetailsModal (compact view) ---------- */
+function prettyDate(val){
+  if (!val) return '—';
+  try{
+    if (val.toDate) return val.toDate().toLocaleString();
+    const d = new Date(val);
+    if (!isNaN(d)) return d.toLocaleString();
+  }catch(e){}
+  return String(val);
+}
+
+function detailRow(label, value){
+  return `<div class="detail-row"><div class="detail-label">${escapeHtml(label)}</div><div class="detail-value">${escapeHtml(value ?? '—')}</div></div>`;
+}
+
+function openDetailsModal(record){
+  if (!record) return;
+
+  const name   = record.studentName || record.name || '(Unknown)';
+  const id     = record.studentID || record.idNumber || record.uid || '—';
+  const course = record.courseYear || record.course || record.year || '—';
+  const status = record.status || '—';
+
+  // ✅ Concern
+  const concern =
+    record.caseTitle ||
+    record.concern ||
+    record.purpose ||
+    '—';
+
+  /* ================================
+     DATE (scheduled) → ONLY `date`
+     ================================ */
+  let dateValue = '—';
+
+  // case 1: Firestore Timestamp
+  if (record.date?.toDate) {
+    dateValue = record.date.toDate().toLocaleDateString();
+  }
+  // case 2: string date "YYYY-MM-DD"
+  else if (typeof record.date === 'string') {
+    const d = new Date(record.date);
+    if (!isNaN(d)) dateValue = d.toLocaleDateString();
+  }
+
+  /* ==================================
+     DATE CREATED → ONLY `createdAt`
+     ================================== */
+  let dateCreated = '—';
+  if (record.createdAt?.toDate) {
+    dateCreated = record.createdAt.toDate().toLocaleString();
+  }
+
+  const parts = [];
+
+  parts.push(`<div style="height:8px;"></div>`);
+  parts.push(detailRow('Name:', name));
+  parts.push(detailRow('ID:', id));
+  parts.push(detailRow('Course/Year:', course));
+  parts.push(detailRow('Status:', status));
+
+  parts.push(`<div style="height:6px;border-top:1px solid rgba(0,0,0,0.06);margin:10px 0;"></div>`);
+
+  parts.push(detailRow('Concern:', concern));
+  parts.push(detailRow('Date:', dateValue));
+  parts.push(detailRow('Date Created:', dateCreated));
+
+  viewDetailsBody.innerHTML = parts.join('');
+  showModal(viewDetailsModal);
+}
+
+
+
+/* ---------- Render function (unchanged except View now opens openDetailsModal) ---------- */
+function render(list){
+  const q = (searchEl.value||'').toLowerCase();
+  const items = list.filter(r=>{
+    const hay = `${r.studentName||''} ${r.studentID||''} ${getRecordTitle(r)||''}`.toLowerCase();
+    return q ? hay.includes(q) : true;
+  });
+
+  rowsEl.innerHTML = '';
+  if (!items.length){
+    rowsEl.innerHTML = `<tr><td colspan="4" class="empty">No consultations found.</td></tr>`;
+    return;
+  }
+
+  items.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(r.studentName || '(Unknown)')}</td>
+      <td>${escapeHtml(r.studentID   || '—')}</td>
+      <td>${escapeHtml(getRecordTitle(r) || '—')}</td>
+      <td>
+        <div class="dropdown">
+          <button class="dropdown-btn" type="button">Action <span class="caret">▼</span></button>
+        </div>
+      </td>
+    `;
+    rowsEl.appendChild(tr);
+
+    const ddBtn = tr.querySelector('.dropdown-btn');
+
+    ddBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const rect = ddBtn.getBoundingClientRect();
+      createFloatingMenu([
+        { label: 'View', onClick: ()=> { openDetailsModal(r); } },
+        { label: 'Delete', onClick: ()=> { openDeleteConfirm(r.id, r._src || 'consultations', r.studentName || r.name || '(Unknown)', tr); } }
+      ], rect);
+    });
+  });
+}
+
+// Live caches
+let cacheAppt = [];
+let cacheCons = [];
+let studentsCache = [];
+
+function combinedRender(){
+  const merged = [...cacheAppt, ...cacheCons].sort((a,b)=>{
+    const da = a._sort || new Date(0);
+    const dbt= b._sort || new Date(0);
+    return dbt - da;
+  });
+  render(merged);
+}
+
+function watchAppointments(){
+  const qRef = query(collection(db, 'appointments'), where('office', '==', 'guidance'));
+  onSnapshot(qRef,
+    (snap)=>{
+      cacheAppt = snap.docs
+        .map(d => ({ id:d.id, _src:'appointments', ...d.data() }))
+        .filter(a => String(a.purpose || '') === 'Consultation')
+        .map(a => ({ ...a, _sort: a.createdAt?.toDate?.() || new Date(0)}));
+      combinedRender();
+    },
+    (err)=> console.error('Failed to load appointments:', err)
+  );
+}
+
+function watchConsultations(){
+  const qRef = query(collection(db, 'consultations'), where('office', '==', 'guidance'));
+  onSnapshot(qRef,
+    (snap)=>{
+      cacheCons = snap.docs
+        .map(d => ({ id:d.id, _src:'consultations', ...d.data() }))
+        .map(a => ({ ...a, _sort: a.openedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0)}));
+      combinedRender();
+    },
+    (err)=> console.error('Failed to load consultations:', err)
+  );
+}
+
+// watch students for autocomplete (ONLY active students)
+function watchStudents(){
+  try {
+    const qRef = query(collection(db, 'students'), where('isActive', '==', true));
+    onSnapshot(qRef,
+      (snap)=>{
+        studentsCache = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      }, (err)=> {
+        console.error('Failed to load students (onSnapshot):', err);
+        // fallback: try fetching without filter if above fails
+        (async ()=>{
+          try {
+            const docs = await getDocs(collection(db, 'students'));
+            studentsCache = docs.docs.map(d=>({ id:d.id, ...d.data() }));
+          } catch(e){ console.error('Fallback students fetch failed', e); studentsCache = []; }
+        })();
+      }
+    );
+  } catch (e) {
+    console.error('watchStudents error, attempting fetch:', e);
+    (async ()=>{
+      try {
+        const docs = await getDocs(collection(db, 'students'));
+        studentsCache = docs.docs.map(d=>({ id:d.id, ...d.data() }));
+      } catch(err){ console.error('students fetch failed', err); studentsCache = []; }
+    })();
+  }
+}
+
+// AUTOCOMPLETE
+const studentInput = f('f_studentName');
+const suggestionsEl = document.getElementById('studentSuggestions');
+
+function showSuggestions(list){
+  if (!list || !list.length) { hideSuggestions(); return; }
+  // display name and fallback id fields
+  suggestionsEl.innerHTML = list.map(s => {
+    const displayName = s.name || s.studentName || s.fullName || '(unknown)';
+    const displayId = s.studentID || s.uid || s.idNumber || s.student_id || '';
+    return `<li data-id="${s.id}" class="sugg-item">${escapeHtml(displayName)} <span class="sugg-meta">(${escapeHtml(displayId || '—')})</span></li>`;
+  }).join('');
+  suggestionsEl.classList.remove('hidden');
+  suggestionsEl.setAttribute('aria-hidden','false');
+  suggestionsEl.querySelectorAll('.sugg-item').forEach((li, idx)=>{
+    li.addEventListener('click', ()=>{
+      const id = li.getAttribute('data-id');
+      const st = studentsCache.find(x=>x.id===id);
+      if (st) fillStudentFields(st);
+      hideSuggestions();
+    });
+    li.setAttribute('tabindex','0');
+    li.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') li.click();
+      else if (e.key === 'ArrowDown') { const next = suggestionsEl.querySelectorAll('.sugg-item')[idx+1]; if (next) next.focus(); }
+      else if (e.key === 'ArrowUp') { const prev = suggestionsEl.querySelectorAll('.sugg-item')[idx-1]; if (prev) prev.focus(); }
+    });
+  });
+}
+function hideSuggestions(){ suggestionsEl.classList.add('hidden'); suggestionsEl.setAttribute('aria-hidden','true'); suggestionsEl.innerHTML = ''; }
+
+// robust fill mapping with multiple field fallbacks
+function fillStudentFields(st){
+  if (!st) return;
+
+  const name = st.name || st.studentName || st.fullName || '';
+  const studentID =
+    st.studentID ||
+    st.uid ||
+    st.idNumber ||
+    st.student_id ||
+    st.id ||
+    '';
+
+  const courseYear =
+    st.courseYear ||
+    st.course ||
+    st.year ||
+    '';
+
+  const contact =
+    st.contact ||
+    st.contact_num ||
+    st.mobile ||
+    st.phone ||
+    '';
+
+  const email =
+    st.email ||
+    st.contactEmail ||
+    st.studentEmail ||
+    '';
+
+  f('f_studentName').value = name;
+  f('f_studentID').value   = studentID;
+  f('f_courseYear').value  = courseYear;
+  f('f_contact').value     = contact;
+  f('f_email').value       = email;
+}
+
+
+studentInput.addEventListener('input', (e)=>{
+  const v = (e.target.value || '').trim().toLowerCase();
+  if (!v) { hideSuggestions(); return; }
+  const matches = studentsCache
+    .filter(s => ( (s.name||s.studentName||'').toLowerCase().includes(v) || (String(s.studentID||s.uid||'')).toLowerCase().includes(v) ))
+    .slice(0,8);
+  showSuggestions(matches);
+});
+studentInput.addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter') {
+    const v = (studentInput.value || '').trim().toLowerCase();
+    const exact = studentsCache.find(s => ((s.name||s.studentName||'').toLowerCase() === v) || ((String(s.studentID||s.uid||'')).toLowerCase() === v));
+    if (exact) { fillStudentFields(exact); hideSuggestions(); }
+  } else if (e.key === 'Escape') hideSuggestions();
+});
+document.addEventListener('click', (ev)=>{ if (!ev.target.closest('#f_studentName') && !ev.target.closest('#studentSuggestions')) hideSuggestions(); });
+
+// Save new consultation
+modalSaveBtn.addEventListener('click', async ()=>{ 
+  if (modal.dataset.mode === 'view') { closeModal(); return; }
+  const studentName = (f('f_studentName').value || '').trim();
+  const studentID   = (f('f_studentID').value || '').trim();
+  const courseYear  = (f('f_courseYear').value || '').trim();
+  const contact     = (f('f_contact').value || '').trim();
+  const email       = (f('f_email').value || '').trim();
+  const caseTitle   = (f('f_caseTitle').value || '').trim();
+  const notes       = (f('f_notes').value || '').trim();
+
+  if (!studentName){ alert('Student Name is required.'); return; }
+  if (!studentID){ alert('Student ID is required.'); return; }
+  if (!caseTitle){ alert('Case Title (Concern) is required.'); return; }
+
+  try{
+    // ensure student doc exists (create or update)
+    let existing = studentsCache.find(s => String(s.studentID || s.uid || s.idNumber || '').trim() === studentID)
+                || studentsCache.find(s => (s.name || s.studentName || '').toLowerCase() === studentName.toLowerCase());
+
+    if (!existing) {
+      const studentPayload = {
+        name: studentName,
+        studentName: studentName,
+        studentID: studentID,
+        uid: studentID,
+        courseYear: courseYear || null,
+        course: courseYear || null,
+        contact: contact || null,
+        contact_num: contact || null,
+        email: email || null,
+        isActive: true,
+        createdAt: serverTimestamp()
+      };
+      await addDoc(collection(db, 'students'), studentPayload);
+    } else {
+      const toUpdate = {};
+      if (existing.studentID !== studentID && existing.uid !== studentID) { toUpdate.studentID = studentID; toUpdate.uid = studentID; }
+      if ((existing.courseYear || existing.course || '') !== courseYear) toUpdate.courseYear = courseYear || null;
+      if ((existing.contact || existing.contact_num || '') !== contact) { toUpdate.contact = contact || null; toUpdate.contact_num = contact || null; }
+      if ((existing.email || '') !== email) toUpdate.email = email || null;
+      if (Object.keys(toUpdate).length) {
+        try { await updateDoc(doc(db, 'students', existing.id), { ...toUpdate, updatedAt: serverTimestamp() }); } catch(e){ console.warn('student update failed', e); }
+      }
+    }
+
+    const payload = {
+    office: 'guidance',
+    studentName,
+    studentID,
+    courseYear: courseYear || null,
+    contact: contact || null,
+    email: email || null,
+    caseTitle,
+    openedAt: serverTimestamp(),
+    notes: notes || null,
+    createdByUid: auth.currentUser?.uid || null
+  };
+
+
+    await addDoc(collection(db, 'consultations'), payload);
+    closeModal();
+  }catch(e){
+    console.error(e);
+    alert('Failed to save consultation: ' + (e?.message || e));
+  }
+});
+
+// Start listeners after auth
+onAuthStateChanged(auth, (user)=>{
+  if (!user){ location.href = 'Login.html'; return; }
+  watchAppointments();
+  watchConsultations();
+  watchStudents();
+});
+
+// search live
+searchEl.addEventListener('input', () => combinedRender());
+
+  </script>
+</body>
+</html>

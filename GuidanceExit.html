@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Guidance • Calendar & Availability</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="GuidanceExit.css">
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button class="active" onclick="window.location.href='GuidanceExit.html'">Exit Interview</button>
+    <button onclick="window.location.href='GuidanceAppoint.html'">Appointments</button>
+    <button onclick="window.location.href='GuidanceConsult.html'">Consultations</button>
+    <button onclick="window.location.href='GuidanceAnn.html'">Announcements</button>
+    <button onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogoutModal()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Row: LEFT (Calendar + Select Day) • RIGHT (Appointments) -->
+<div class="row">
+
+  <!-- LEFT COLUMN -->
+  <div class="left-column">
+
+    <!-- CALENDAR -->
+    <div class="calendar">
+      <div class="calendar-header">
+        <button id="prev-month">‹</button>
+        <div id="month-year"></div>
+        <button id="next-month">›</button>
+      </div>
+
+      <div class="calendar-body">
+        <div class="calendar-weekdays">
+          <div>Sun</div><div>Mon</div><div>Tue</div>
+          <div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div class="calendar-dates"></div>
+      </div>
+
+      <div class="calendar-footer">
+        <div class="calendar-legend">
+          <span class="legend-item">
+            <span class="legend-dot legend-green"></span> Available
+          </span>
+          <span class="legend-item">
+            <span class="legend-dot legend-black"></span> Unavailable
+          </span>
+        </div>
+      </div>
+    </div>
+
+     <!-- SELECT DAY CARD -->
+    <div class="day-card" id="dayCard">
+      <div class="badge">Select Day</div>
+      <div class="msg" id="selected-day-message">
+        Pick a date. If it’s available it shows green.
+      </div>
+      <button class="primary" id="set-available-btn" disabled>
+        Set as Available
+      </button>
+      <div id="inlineMsg" class="action-msg"></div>
+    </div>
+
+  </div>
+      
+
+<!-- RIGHT COLUMN -->
+  <div class="right-column">
+
+    <h3 style="font-family: Genos; font-size: 30px; margin-bottom: 10px;">
+      Appointments
+    </h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="name">Date </th>
+          <th>Student Name</th>
+          <th>Student ID</th>
+          <th>Course & Year</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody id="casesBody">
+        <!-- filled by JS -->
+      </tbody>
+    </table>
+
+  </div>
+
+</div>
+
+  <!-- Availability modal -->
+  <div id="availModal" class="modal">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <h3 id="availTitle">Set Availability</h3>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="slotStart">Start time</label>
+          <input id="slotStart" type="time" value="08:00" step="300">
+        </div>
+        <div class="form-col">
+          <label for="slotEnd">End time</label>
+          <input id="slotEnd" type="time" value="17:00" step="300">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="slotDuration">Slot duration (minutes)</label>
+          <input id="slotDuration" type="number" min="5" step="5" value="20">
+          <div class="note">Click a slot to disable it (e.g., lunch). Disabled slots are red & struck-through.</div>
+        </div>
+      </div>
+
+      <!-- NEW: cap per slot -->
+      <div class="form-row">
+        <div class="form-col">
+          <label for="slotCap">Cap per slot (bookings)</label>
+          <input id="slotCap" type="number" min="1" step="1" value="5">
+          <div class="note">How many students can book each generated time.</div>
+        </div>
+      </div>
+
+      <div class="form-col">
+        <label>Generated slots</label>
+        <div id="slotsPreview" class="slots-preview"></div>
+        <div class="note" id="slotsCount"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="availCancel">Close</button>
+        <button class="btn btn-primary" id="availSave">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Case View Modal -->
+  <div id="caseModal" class="modal">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <h3>Case Details</h3>
+      <div style="display:grid; grid-template-columns: 130px 1fr; gap:8px 12px; font-size:14px;">
+        <div><b>Date</b></div><div id="cmDate">—</div>
+        <div><b>Student</b></div><div id="cmStudent">—</div>
+        <div><b>Student ID</b></div><div id="cmSid">—</div>
+        <div><b>Course/Year</b></div><div id="cmCourse">—</div>
+        <div><b>Case Type</b></div><div id="cmType">—</div>
+        <div><b>Status</b></div><div id="cmStatus">—</div>
+        <div><b>Counselor</b></div><div id="cmCounselor">—</div>
+        <div><b>Notes</b></div><div id="cmNotes" style="white-space:pre-wrap;">—</div>
+      </div>
+      <div class="modal-actions" style="margin-top:14px;">
+        <button class="btn btn-secondary" id="caseClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Modal -->
+  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background-color: white; padding: 30px; border-radius: 10px; width: 300px; text-align: center;">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="margin-top: 20px;">
+        <button onclick="logoutNow" style="background-color: #fdb827; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer;">Yes</button>
+        <button onclick="closeLogoutModal()" style="background-color: #ccc; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase + Calendar + Announcements + Today Cases -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, onSnapshot, doc, getDoc, setDoc,
+      serverTimestamp, Timestamp, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // Shared collection; tag each doc with office
+    const AV_COLLECTION = "availability";
+    const OFFICE = "guidance"; // this page is for Guidance
+    const ANNOUNCEMENTS_COLLECTION = "announcements";
+    const ANN_LIMIT = 5;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // ---- DOM (Calendar)
+    const calendarDates   = document.querySelector('.calendar-dates');
+    const monthYear       = document.getElementById('month-year');
+    const prevMonthBtn    = document.getElementById('prev-month');
+    const nextMonthBtn    = document.getElementById('next-month');
+    const setAvailableBtn = document.getElementById('set-available-btn');
+    const selectedDayMsg  = document.getElementById('selected-day-message');
+
+    const availModal   = document.getElementById('availModal');
+    const availTitle   = document.getElementById('availTitle');
+    const slotStartEl  = document.getElementById('slotStart');
+    const slotEndEl    = document.getElementById('slotEnd');
+    const slotDurEl    = document.getElementById('slotDuration');
+    const slotCapEl    = document.getElementById('slotCap');
+    const slotsPreview = document.getElementById('slotsPreview');
+    const slotsCount   = document.getElementById('slotsCount');
+    const availCancel  = document.getElementById('availCancel');
+    const availSave    = document.getElementById('availSave');
+
+  
+
+    // ---- DOM (Recent Cases + Modal)
+    const casesBody   = document.getElementById('casesBody');
+    const cmDate      = document.getElementById('cmDate');
+    const cmStudent   = document.getElementById('cmStudent');
+    const cmSid       = document.getElementById('cmSid');
+    const cmCourse    = document.getElementById('cmCourse');
+    const cmType      = document.getElementById('cmType');
+    const cmStatus    = document.getElementById('cmStatus');
+    const cmCounselor = document.getElementById('cmCounselor');
+    const cmNotes     = document.getElementById('cmNotes');
+
+    function todayCreatedBounds() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+
+  return {
+    start: Timestamp.fromDate(new Date(y, m, d, 0, 0, 0, 0)),
+    end: Timestamp.fromDate(new Date(y, m, d, 23, 59, 59, 999))
+  };
+}
+
+    // Helpers
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const pad = n => String(n).padStart(2,'0');
+    const ymd = (y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+    const pretty = (y,m,d)=>`${months[m]} ${d}, ${y}`;
+    const setMsg = t => { selectedDayMsg.textContent = t; };
+
+    function escapeHtml(s){
+      return String(s)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    // --- General pick & formatting helpers
+    function pick(...xs){ for (const x of xs){ if (x!=null && String(x).trim()!=="") return x; } return ""; }
+    function courseYearLabel(a){
+      const ord = n => ["","1st","2nd","3rd","4th","5th","6th","7th","8th"][+n] || `${n}th`;
+      const course = pick(a.course, a.program, a.courseName);
+      const yl = pick(a.yearLevel, a.year, a.level);
+      const ystr = yl ? (isNaN(parseInt(yl,10)) ? yl : `${ord(parseInt(yl,10))} Year`) : "";
+      return [course, ystr].filter(Boolean).join(" – ");
+    }
+    function fmtDate(val){
+      try {
+        if (!val) return '—';
+        if (typeof val?.toDate === 'function') {
+          const d = val.toDate();
+          return d.toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+      } catch { return '—'; }
+    }
+
+
+    // ===== Calendar logic (unchanged) =====
+    let current = new Date();
+    let curMonth = current.getMonth();
+    let curYear  = current.getFullYear();
+    let selectedFullDate = null;
+    let selectedCell = null;
+
+    // cache for this month (Guidance only)
+    let availableDatesSet = new Set();
+    let availDocs = {}; // dateStr -> { slots:[], caps:{}, removedSlots:{}, ... }
+
+    function toMinutes(hhmm){ const m=/^(\d{1,2}):(\d{2})$/.exec(hhmm); if(!m) return null; return (+m[1])*60+(+m[2]); }
+    function fromMinutes(mins){ return `${pad(Math.floor(mins/60))}:${pad(mins%60)}`; }
+    function genSlots(s,e,d){ const S=toMinutes(s), E=toMinutes(e), D=+d; if(S==null||E==null||D<=0||E<=S) return []; const out=[]; for(let t=S;t<E;t+=D) out.push(fromMinutes(t)); return out; }
+
+    function renderCalendar(m,y){
+      const calendarDates = document.querySelector('.calendar-dates');
+      calendarDates.innerHTML='';
+      monthYear.textContent = `${months[m]} ${y}`;
+      const today = new Date();
+      const first = new Date(y,m,1).getDay();
+      const days = new Date(y,m+1,0).getDate();
+      for(let i=0;i<first;i++) calendarDates.appendChild(document.createElement('div'));
+      for(let d=1; d<=days; d++){
+        const cell = document.createElement('div');
+        const dateStr = ymd(y,m,d);
+        cell.textContent = d;
+        cell.dataset.date = dateStr;
+        if (d===today.getDate() && m===today.getMonth() && y===today.getFullYear()) cell.classList.add('current-date');
+        if (availableDatesSet.has(dateStr)) cell.classList.add('available-date');
+        cell.addEventListener('click', ()=>{
+          if (selectedCell) selectedCell.classList.remove('selected-date');
+          selectedCell = cell; cell.classList.add('selected-date');
+          selectedFullDate = dateStr;
+          setMsg(availableDatesSet.has(dateStr) ? `${pretty(y,m,d)} is available.` : `Selected ${pretty(y,m,d)}. Click "Set as Available" to publish.`);
+          setAvailableBtn.disabled = false;
+        });
+        calendarDates.appendChild(cell);
+      }
+    }
+
+    let unsubMonth = null;
+    function listenMonth(m, y){
+      if (unsubMonth) { unsubMonth(); unsubMonth = null; }
+
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const startStr = ymd(y, m, 1);
+      const endStr   = ymd(y, m, lastDay);
+
+      const qAvail = query(
+        collection(db, AV_COLLECTION),
+        where("dateStr", ">=", startStr),
+        where("dateStr", "<=", endStr)
+      );
+
+      unsubMonth = onSnapshot(qAvail, snap => {
+        availableDatesSet = new Set();
+        availDocs = {};
+        snap.docs.forEach(docSnap => {
+          const data = docSnap.data() || {};
+          if (data.office !== OFFICE) return; // client-side filter by office
+
+          const dstr = data.dateStr;
+          if (dstr) {
+            availableDatesSet.add(dstr);
+            availDocs[dstr] = {
+              slots: Array.isArray(data.slots) ? data.slots : [],
+              caps: data.caps || {},
+              removedSlots: data.removedSlots || {},
+              ...data
+            };
+          }
+        });
+        renderCalendar(curMonth, curYear);
+      }, err => {
+        console.error("availability month listener error:", err);
+        availableDatesSet = new Set();
+        availDocs = {};
+        renderCalendar(curMonth, curYear);
+      });
+    }
+
+    prevMonthBtn.addEventListener('click', ()=>{ curMonth--; if(curMonth<0){curMonth=11; curYear--;} listenMonth(curMonth,curYear); });
+    nextMonthBtn.addEventListener('click', ()=>{ curMonth++; if(curMonth>11){curMonth=0; curYear++;} listenMonth(curMonth,curYear); });
+
+    // Modal controls
+    function openModal(){
+      if(!selectedFullDate){ setMsg("Pick a date first."); return; }
+      const [Y,M,D] = selectedFullDate.split('-').map(Number);
+      availTitle.textContent = `Set Availability • ${pretty(Y,M-1,D)}`;
+
+      const existing = availDocs[selectedFullDate] || { slots:[], caps:{} };
+
+      if (existing.slots?.length){
+        slotStartEl.value = existing.slots[0];
+        const step = Math.max(5, (toMinutes(existing.slots[1]||existing.slots[0]) - toMinutes(existing.slots[0])) || 20);
+        slotDurEl.value = step;
+        slotEndEl.value = fromMinutes(toMinutes(existing.slots.at(-1)) + step);
+      }
+
+      const capVals = Object.values(existing.caps || {}).filter(v => typeof v === 'number' && v > 0);
+      if (capVals.length){
+        const same = capVals.every(v => v === capVals[0]);
+        if (same) slotCapEl.value = String(capVals[0]);
+      }
+
+      drawPreview();
+      availModal.style.display = "flex";
+    }
+    function closeModal(){ availModal.style.display="none"; }
+
+    setAvailableBtn.addEventListener('click', openModal);
+    availCancel.addEventListener('click', closeModal);
+    availModal.addEventListener('click', (e)=>{ if(e.target===availModal) closeModal(); });
+
+    function drawPreview(){
+      const base = genSlots(slotStartEl.value, slotEndEl.value, slotDurEl.value);
+      const existing = new Set(availDocs[selectedFullDate]?.slots || []);
+      const enabled = existing.size ? new Set(base.filter(t=>existing.has(t))) : new Set(base);
+
+      slotsPreview.innerHTML = base.map(t=>`<button type="button" class="slot-chip ${enabled.has(t)?'':'off'}" data-time="${t}">${t}</button>`).join('');
+      document.querySelectorAll('.slot-chip').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const t = btn.dataset.time;
+          if (enabled.has(t)) { enabled.delete(t); btn.classList.add('off'); }
+          else { enabled.add(t); btn.classList.remove('off'); }
+          slotsCount.textContent = `${enabled.size} slot(s) enabled`;
+        });
+      });
+      slotsCount.textContent = `${enabled.size} slot(s) enabled`;
+
+      availSave.onclick = async ()=>{
+        if (!selectedFullDate) return;
+        const finalSlots = [...enabled].sort();
+        if (!finalSlots.length){ alert("Select at least one slot."); return; }
+
+        const startStr = slotStartEl.value || "08:00";
+        const endStr   = slotEndEl.value   || "17:00";
+        const dur      = Number(slotDurEl.value) || 20;
+
+        const capNum = Math.max(1, Number(slotCapEl.value) || 1);
+        const caps   = Object.fromEntries(finalSlots.map(t => [t, capNum]));
+
+        const [y,m,d] = selectedFullDate.split('-').map(Number);
+        const [sh,sm] = startStr.split(':').map(Number);
+        const [eh,em] = endStr.split(':').map(Number);
+
+        const docId = `${selectedFullDate}__${OFFICE}`;
+        const ref   = doc(db, AV_COLLECTION, docId);
+
+        const payload = {
+          office: OFFICE,
+          dateStr: selectedFullDate,
+          date: selectedFullDate,
+          startTime: startStr,
+          endTime: endStr,
+          slotDurationMins: dur,
+          slots: finalSlots,
+          caps,
+          startAt: Timestamp.fromDate(new Date(y, m-1, d, sh||0, sm||0)),
+          endAt:   Timestamp.fromDate(new Date(y, m-1, d, eh||0, em||0)),
+          updatedAt: serverTimestamp()
+        };
+
+        try{
+          const snap = await getDoc(ref);
+          if (!snap.exists()) payload.createdAt = serverTimestamp();
+          // if there were previously removedSlots, preserve them (so we don't overwrite restoration metadata)
+          if (snap.exists()) {
+            const old = snap.data() || {};
+            if (old.removedSlots) payload.removedSlots = old.removedSlots;
+          }
+          await setDoc(ref, payload, { merge: true });
+          availableDatesSet.add(selectedFullDate);
+          const cell = [...document.querySelectorAll('.calendar-dates div')].find(c=>c.dataset.date===selectedFullDate);
+          if (cell) cell.classList.add('available-date');
+          setMsg(`${pretty(y,m-1,d)} is available (Guidance).`);
+          closeModal();
+        }catch(err){
+          console.error("save availability error:", err);
+          alert("Could not save availability. Please try again.");
+        }
+      };
+    }
+
+    slotStartEl.addEventListener('input', drawPreview);
+    slotEndEl.addEventListener('input', drawPreview);
+    slotDurEl.addEventListener('input', drawPreview);
+
+
+
+    function renderCases(rows){
+  casesBody.innerHTML = "";
+
+  if (!rows.length){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td colspan="5" style="text-align:center;color:#6b7280;padding:12px">
+        No exit interviews for today.
+      </td>`;
+    casesBody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(r.date)}</td>
+      <td>${escapeHtml(r.studentName)}</td>
+      <td>${escapeHtml(r.studentId)}</td>
+      <td>${escapeHtml(r.courseYear)}</td>
+      <td>${escapeHtml(r.purpose)}</td>
+    `;
+    casesBody.appendChild(tr);
+  });
+}
+
+
+    function openCaseModal(r){
+      cmDate.textContent      = r.dateDisp || "—";
+      cmStudent.textContent   = r.studentName || "—";
+      cmSid.textContent       = r.studentId || "—";
+      cmCourse.textContent    = r.courseYear || "—";
+      cmType.textContent      = r.caseType || "—";
+      cmStatus.textContent    = r.status || "—";
+      cmCounselor.textContent = r.counselor || "—";
+      cmNotes.textContent     = r.notes || "—";
+      caseModal.style.display = "flex";
+    }
+    caseClose.addEventListener("click", ()=> caseModal.style.display = "none");
+    caseModal.addEventListener("click", (e)=>{ if(e.target===caseModal) caseModal.style.display="none"; });
+
+    let unsubCases1 = null;
+    let buffer1 = [];
+
+
+    function listenTodayCases() {
+  if (unsubCases1) {
+    try { unsubCases1(); } catch {}
+    unsubCases1 = null;
+  }
+
+  const { start, end } = todayCreatedBounds();
+
+  const qRef = query(
+    collection(db, "appointments"),
+    where("office", "==", "guidance"),
+    where("createdAt", ">=", start),
+    where("createdAt", "<=", end)
+  );
+
+  unsubCases1 = onSnapshot(qRef, (snap) => {
+    const rows = [];
+    const seen = new Set();
+
+    snap.docs.forEach(docSnap => {
+      const a = docSnap.data() || {};
+
+      // ✅ EXIT INTERVIEW ONLY
+      const purpose = (a.purpose || "").toLowerCase().trim();
+      if (purpose !== "exit interview") return;
+
+      // ✅ NO DUPLICATES
+      if (seen.has(docSnap.id)) return;
+      seen.add(docSnap.id);
+
+      rows.push({
+  id: docSnap.id,
+
+  // ✅ SHOW SCHEDULED DATE (not createdAt)
+ date:
+  a.dateStr ||
+  (typeof a.date === "string" ? a.date : null) ||
+  (a.date?.toDate ? a.date.toDate().toLocaleDateString() : "—"),
+
+
+  studentName: a.studentName || "—",
+  studentId: a.studentID || "—",
+  courseYear: courseYearLabel(a) || "—",
+  purpose: "Exit Interview"
+});
+
+    });
+
+    console.log(`✅ EXIT INTERVIEWS CREATED TODAY: ${rows.length}`);
+    renderCases(rows);
+  }, (err) => {
+    console.error("Exit interview listener error:", err);
+    renderCases([]);
+  });
+}
+
+
+    // ===== Automatic reconciliation: when appointments change, remove (or restore) slots in availability docs =====
+    // Option B behavior: when a slot's bookings >= cap, REMOVE that slot from the availability document (vanish it).
+    // We also store removedSlots metadata so it can be restored if bookings later drop below cap (e.g., cancellation).
+
+    let unsubAppointments = null;
+    function listenAppointmentsForAvailabilitySync(){
+      if (unsubAppointments) { try { unsubAppointments(); } catch{} unsubAppointments = null; }
+      const q = query(collection(db, "appointments"), where("office", "==", OFFICE));
+      unsubAppointments = onSnapshot(q, snap => {
+        processAppointmentSnapshotForAvailability(snap.docs);
+      }, err => {
+        console.error("appointments listener for availability sync error:", err);
+      });
+    }
+
+    async function processAppointmentSnapshotForAvailability(docs){
+      // Build counts: dateStr -> time -> count of active bookings
+      const countsByDate = {};
+      for (const d of docs){
+        const a = d.data() || {};
+        // ignore appointment statuses that shouldn't count as bookings
+        const st = (a.status || "").toString().toLowerCase();
+        if (st === "rejected" || st === "cancelled") continue;
+
+        const dateStr = a.dateStr || (typeof a.date === 'string' ? a.date : null);
+        const time = a.time;
+        if (!dateStr || !time) continue;
+        countsByDate[dateStr] = countsByDate[dateStr] || {};
+        countsByDate[dateStr][time] = (countsByDate[dateStr][time] || 0) + 1;
+      }
+
+      // compute union of relevant dates (existing availability docs in memory + dates in counts)
+      const datesToCheck = new Set([...Object.keys(availDocs), ...Object.keys(countsByDate)]);
+      // For safety and to ensure we operate on latest doc state, reconcile each date by fetching doc & updating
+      await Promise.all(Array.from(datesToCheck).map(dateStr => reconcileAvailabilityForDate(dateStr, countsByDate[dateStr] || {})));
+      // update local cache (so UI stays in sync); re-listen month will refresh but let's keep availDocs consistent by re-fetching the month
+      listenMonth(curMonth, curYear);
+    }
+
+    async function reconcileAvailabilityForDate(dateStr, counts) {
+      try {
+        const docId = `${dateStr}__${OFFICE}`;
+        const ref = doc(db, AV_COLLECTION, docId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return; // nothing to do
+
+        const data = snap.data() || {};
+        const slots = Array.isArray(data.slots) ? data.slots.slice() : [];
+        const caps = Object.assign({}, data.caps || {});
+        const removedSlots = Object.assign({}, data.removedSlots || {});
+        let changed = false;
+
+        // 1) Remove FULL slots (count >= cap) -> remove from slots[], delete caps[time], record in removedSlots
+        for (const time of slots.slice()) {
+          const capVal = Number(caps[time] ?? 1);
+          const booked = Number(counts[time] ?? 0);
+          if (booked >= capVal) {
+            // move to removedSlots (store original cap so we can restore later)
+            removedSlots[time] = removedSlots[time] || { cap: capVal, removedAt: serverTimestamp() };
+            // remove from slots array and caps
+            const idx = slots.indexOf(time);
+            if (idx !== -1) slots.splice(idx, 1);
+            if (typeof caps[time] !== 'undefined') delete caps[time];
+            changed = true;
+          }
+        }
+
+        // 2) Restore slots previously removed if bookings < original cap
+        for (const timeKey of Object.keys(removedSlots)) {
+          const meta = removedSlots[timeKey];
+          const originalCap = Number(meta?.cap ?? NaN);
+          const booked = Number(counts[timeKey] ?? 0);
+          // If booked is less than original cap, restore the slot
+          if (!Number.isNaN(originalCap) && booked < originalCap) {
+            // Only restore if not already present
+            if (!slots.includes(timeKey)) {
+              slots.push(timeKey);
+              caps[timeKey] = originalCap;
+              delete removedSlots[timeKey];
+              changed = true;
+            }
+          }
+        }
+
+        // Keep slots sorted for predictable UI
+        slots.sort();
+
+        if (changed) {
+          const payload = {
+            slots,
+            caps,
+            removedSlots,
+            updatedAt: serverTimestamp()
+          };
+          await setDoc(ref, payload, { merge: true });
+        }
+      } catch (err) {
+        console.error("reconcileAvailabilityForDate error:", err);
+      }
+    }
+
+    // Boot
+    onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  // basic listeners (safe for everyone)
+  listenMonth(curMonth, curYear);
+  listenTodayCases();
+
+  // role-based logic
+  try {
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    const role = userSnap.exists()
+      ? String(userSnap.data().role || "").toLowerCase()
+      : null;
+
+    // ✅ ONLY GUIDANCE can run availability sync
+    if (role === "guidance") {
+      listenAppointmentsForAvailabilitySync();
+    }
+  } catch (err) {
+    console.error("Role check failed:", err);
+  }
+
+  setAvailableBtn.disabled = true;
+  setMsg("Pick a date. If it’s available it shows green.");
+});
+
+
+      setAvailableBtn.disabled = true;
+      setMsg("Pick a date. If it’s available it shows green.");
+  
+      
+
+    // Header helpers
+    window.toggleLogout=function(){
+      const btn=document.getElementById("logoutBtn");
+      btn.style.display=(btn.style.display==="block"?"none":"block");
+    };
+    window.openLogoutModal = function(){ document.getElementById("modalOverlay").style.display = "flex"; };
+    window.closeLogoutModal = function(){ document.getElementById("modalOverlay").style.display = "none"; };
+    window.logoutNow = function(){ window.location.href = "Login.html"; };
+  </script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+    /* Reset and Fonts */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    body { background-color: #ffffff; display: flex; min-height: 100vh; }
+    h2 { font-family: Genos, sans-serif; font-size: 50px; margin-bottom: 13px; }
+    h3 { font-family: Genos, sans-serif; }
+
+    /* Sidebar */
+    .sidebar { background-color: #020120; width: 265px; padding: 20px; color: white; }
+    .logo { display: flex; align-items: center; margin-bottom: 20px; }
+    .logo img { width: 70px; margin-right: 10px; margin-top: -20px; }
+    .sidebar button {
+      background-color: #fdb827; font-size: 17px; border: none; color: black;
+      padding: 15px; width: 95%; margin-bottom: 10px; font-weight: bold; cursor: pointer;
+      border-radius: 8px; text-align: center; position: relative; margin-left: 5px;
+    }
+    .sidebar button.active::after {
+      content: '◀'; color: white; position: absolute; right: -1px; top: 50%;
+      transform: translateY(-50%); font-size: 18px;
+    }
+
+    .main-content { flex-grow: 1; padding: 0; }
+    .header { display: flex; justify-content: flex-end; align-items: center; background-color: #020120; height: 97px; padding: 0 30px; }
+    .user-container { position: relative; }
+    .user-icon-container {
+      width: 50px; height: 50px; background-color: #ccc; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .user-icon-container img { width: 40px; height: 43px; border-radius: 50%; object-fit: cover; }
+    .logout {
+      position: absolute; top: 60px; right: 0; background-color: #fdb827; padding: 10px 20px;
+      border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; z-index: 10;
+    }
+
+    /* ===== Layout row (Select card • Calendar • Announcements) ===== */
+    /* === Main layout: left stack + right table === */
+.row {
+  display: flex;
+  gap: 30px;
+  margin-top: 20px;
+  margin-left: 100px;
+  align-items: flex-start;
+}
+/* LEFT STACK (calendar + select day) */
+.row > .calendar,
+.row > .day-card {
+  flex-shrink: 0;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 360px;
+  margin-left: -70px;
+}
+.right-column {
+  flex: 1;
+  min-width: 520px;
+}
+.right-column h3 {
+  font-family: Genos, sans-serif;
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.right-column table {
+  display: block;
+  max-height: 420px;
+  overflow-y: auto;
+  width: 95%;
+}
+
+.right-column thead {
+  position: sticky;
+  top: 0;
+  background-color: #273ea3;
+  z-index: 1;
+}
+
+
+    /* Select Day Card (LEFT) */
+  .day-card {
+  width: 360px;
+  background: #3e55c7;
+  color: #fff;
+  border-radius: 16px;
+  padding: 18px 16px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+  height: auto;
+}
+    .day-card .badge {
+      background: #eef0f7; color: #222; font-weight: bold;
+      border-radius: 10px; padding: 8px 12px; text-align: center;
+      font-family: Genos, sans-serif; font-size: 20px; margin-bottom: 10px; 
+    }
+    .day-card .msg { font-size: 18px; font-weight: bold; color: #f0f4ff; line-height: 1.5; min-height: 44px; margin-top: 10px; margin-bottom: -50px;}
+    .day-card .primary {
+      margin-top: 70px; width: 100%;
+      background-color: #fdb827; color: #000; border: none;
+      padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer;
+
+    }
+    .day-card .danger {
+      margin-top: 10px; width: 100%;
+      background-color: #eee; color: #222; border: none;
+      padding: 10px; border-radius: 10px; font-weight: bold; cursor: pointer;
+      display: none;
+    }
+    .action-msg {
+      display: none;
+      margin-top: 10px;
+      font-size: 13px;
+      background: #e6ffed;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    /* Calendar (MIDDLE) */
+    .calendar {
+  width: 360px;
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 15px;
+  overflow: hidden;
+  border: 1px solid #dcdcdc;
+  
+}
+    .calendar-header {
+      display: flex; justify-content: space-between; align-items: center; padding: 15px;
+      background: linear-gradient(to right, #344CB7, #3e55c7); color: white; font-size: 1.1em;
+    }
+    .calendar-header button {
+      background-color: #fdb827; border: none; padding: 5px 10px; border-radius: 5px;
+      font-size: 1.2em; cursor: pointer; transition: background 0.3s;
+    }
+    .calendar-header button:hover { background-color: #d9a312; }
+    #month-year { font-weight: bold; letter-spacing: 1px; cursor: pointer; }
+
+    .calendar-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      background-color: #f0f0f0; text-align: center; padding: 8px 0;
+      font-weight: bold; color: #344CB7;
+    }
+    .calendar-dates { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px; gap: 5px; }
+    .calendar-dates div {
+      padding: 10px; text-align: center; border-radius: 8px; cursor: pointer;
+      transition: background 0.3s, transform 0.2s; font-weight: bold; color: #333; background-color: #f9f9f9;
+    }
+    .calendar-dates div:hover { background-color: #e6f0ff; transform: scale(1.05); }
+    .current-date { background-color: #344CB7 !important; color: white !important; box-shadow: 0 0 5px rgba(52, 76, 183, 0.6); }
+    .available-date { background-color: #4CAF50 !important; color: white !important; }
+    .selected-date { outline: 2px solid #fdb827; }
+
+    /* Legend under calendar */
+    .calendar-footer { padding: 10px 12px 14px; }
+    .calendar-legend { display: flex; align-items: center; gap: 16px; margin-top: 4px; margin-left: 70px;}
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #333; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid #ccc; }
+    .legend-green { background: #4CAF50; border-color: #3f8e43; }
+    .legend-black { background: #000; border-color: #000; }
+
+
+    /* Recent Cases table */
+    table {
+      width: 90%; border-collapse: collapse; border-radius: 10px; overflow: hidden;
+      margin-left: 5px;  margin-top: 10px; table-layout: fixed; margin-bottom: 10px;
+    }
+    thead { background-color: #273ea3; color: white; }
+    th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #ddd; overflow-wrap: break-word; }
+    th:nth-child(1), td:nth-child(1) { width: 6%; }
+    th:nth-child(2), td:nth-child(2) { width: 8%; }
+    th:nth-child(3), td:nth-child(3) { width: 2%; }
+    th:nth-child(4), td:nth-child(4) { width: 4%; }
+    th:nth-child(5), td:nth-child(5) { width: 2%; }
+    .view-button { background-color: #fdb827; color: black; padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .view-button:hover { background-color: #273ea3; }
+
+    /* ===== Modals ===== */
+    .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:999; align-items:center; justify-content:center; }
+    .modal-card{ background:#fff; width:460px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.25); padding:18px 20px; }
+    .modal-card h3{ margin-bottom:10px; color:#273ea3; font-family:Genos, sans-serif; }
+    .form-row{ display:flex; gap:10px; margin-bottom:10px; }
+    .form-col{ flex:1; display:flex; flex-direction:column; }
+    label{ font-size:13px; font-weight:bold; margin-bottom:4px; color:#333; }
+    input[type="time"], input[type="number"]{ padding:8px; border:1px solid #ddd; border-radius:8px; }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:10px; }
+    .btn{ border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .btn-primary{ background:#344CB7; color:#fff; }
+    .btn-secondary{ background:#e0e0e0; color:#333; }
+    .note{ font-size:12px; color:#666; margin-top:4px; }
+    .slots-preview{ display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid #eee; border-radius:8px; max-height:150px; overflow:auto; }
+    .slot-chip{ padding:4px 8px; border-radius:999px; background:#f0f4ff; border:1px solid #d6defa; font-weight:bold; font-size:12px; cursor:pointer; user-select:none; }
+    .slot-chip.off{ background:#ffecec; border-color:#ffb8b8; text-decoration:line-through; color:#a90000; }

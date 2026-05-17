@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Guidance • Announcements</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="GuidanceAnn.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button onclick="window.location.href='GuidanceExit.html'">Exit Interview</button>
+    <button onclick="window.location.href='GuidanceAppoint.html'">Appointments</button>
+    <button onclick="window.location.href='GuidanceConsult.html'">Consultations</button>
+    <button class="active" onclick="window.location.href='GuidanceAnn.html'">Announcements</button>
+    <button onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <div class="filter-container">
+        <button id="openCreate">Create Guidance Announcement</button>
+      </div>
+      <div class="search-container">
+        <input type="text" id="search" placeholder="Search (title/content)..." />
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Posted on</th>
+          <th>Category</th>
+          <th>Attachment</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="annBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Create / Edit Modal -->
+  <div id="createModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" role="button" tabindex="0">&times;</span>
+      <h2 style="text-align:center; font-family:'Genos', sans-serif;">Create Guidance Announcement</h2>
+
+      <form id="annForm" novalidate>
+        <input type="text" id="title" placeholder="Title" required />
+        <textarea id="content" placeholder="Write your announcement here..." required></textarea>
+
+        <input
+          type="file"
+          id="attachment"
+          accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain"
+          aria-label="Attachment"
+        />
+        <label id="attachmentLabel" for="attachment" role="button" tabindex="0">
+          Click to choose a file (optional)
+        </label>
+        <div id="attachmentName" aria-live="polite"></div>
+
+        <button id="submitBtn" type="submit">Disseminate</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div id="confirmModal" class="confirm-modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="confirm-box" role="document" aria-labelledby="confirmTitle">
+      <h3 id="confirmTitle">Confirm delete</h3>
+      <p id="confirmMessage">Are you sure you want to delete this announcement?</p>
+      <div id="confirmMeta" style="font-size:16px; color:#666;"></div><br>
+      
+      <div style="display:flex; justify-content: space-between; align-items: center;">
+        
+        <div class="confirm-actions">
+          <button class="btn cancel" id="cancelDeleteBtn" type="button">Cancel</button>
+          <button class="btn danger" id="confirmDeleteBtn" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- VIEW ANNOUNCEMENT MODAL -->
+<div id="viewModal" class="confirm-modal">
+  <div class="confirm-box" style="max-width:700px;">
+    <h3 id="viewTitle"></h3>
+    <p id="viewMeta" style="font-size:14px;color:#666;"></p>
+<div id="viewContent" class="view-content-box"></div>
+    <div id="viewAttachment" style="margin-top:12px;"></div>
+    <div class="confirm-actions">
+      <button class="btn cancel" id="closeViewBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ===== Firebase v11 imports (match your Admin page) =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+  import {
+  getFirestore,
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  where,               // ✅ ADD THIS
+  orderBy,
+  serverTimestamp,
+  getDocs,
+  limit,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+
+  // ===== replace with your firebase config (same as Admin) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // ===== DOM short-hands =====
+  const $ = id => document.getElementById(id);
+  const annBody = $("annBody");
+  const searchInput = $("search");
+  const modal = $("createModal");
+  const openCreateBtn = $("openCreate");
+  const closeX = document.querySelector("#createModal .close");
+  const form = $("annForm");
+  const submitBtn = $("submitBtn");
+  const titleEl = $("title");
+  const contentEl = $("content");
+  const attachmentEl = $("attachment");
+  const attachmentLabel = $("attachmentLabel");
+  const attachmentName = $("attachmentName");
+
+  // view modal elements
+const viewModal = $("viewModal");
+const viewTitle = $("viewTitle");
+const viewMeta = $("viewMeta");
+const viewContent = $("viewContent");
+const viewAttachment = $("viewAttachment");
+const closeViewBtn = $("closeViewBtn");
+
+
+  // confirm modal elements
+  const confirmModal = $("confirmModal");
+  const confirmDeleteBtn = $("confirmDeleteBtn");
+  const cancelDeleteBtn = $("cancelDeleteBtn");
+  const confirmMeta = $("confirmMeta");
+
+  window.toggleLogout = function(){ const b=$("logoutBtn"); b.style.display = (b.style.display==="block")?"none":"block"; }
+  window.openLogout  = function(){ signOut(auth); }
+
+  // ===== state =====
+  let editing = null; // { id, data } or null
+  let COLLECTION = "announcements";
+  let unsubscribe = null;
+  let cache = []; // full dataset then filtered for display
+
+  // ===== UI helpers =====
+  const MAX_INLINE_FILE_BYTES = 900 * 1024;
+  function fmtDate(ts){
+    if (!ts) return "—";
+    if (typeof ts.toDate === "function") ts = ts.toDate();
+    const dd=String(ts.getDate()).padStart(2,"0");
+    const mm=String(ts.getMonth()+1).padStart(2,"0");
+    const yy=ts.getFullYear();
+    return `${mm}/${dd}/${yy}`;
+  }
+  function sanitizeFileName(name){ return name.replace(/[^\w.\-() ]+/g,"_"); }
+  function esc(s){ return (s||"").replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[m])); }
+  function showError(label, err){ console.error(label, err); alert(`${label}:\n${err?.code||""} ${err?.message||err}`); }
+  function fileToDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  // ===== modal open/close =====
+  function openModal(editId=null, data=null){
+    editing = editId ? { id: editId, data } : null;
+    modal.style.display = "block";
+    titleEl.value = data?.title || "";
+    contentEl.value = data?.content || "";
+    attachmentEl.value = "";
+    attachmentLabel.textContent = "Click to choose a file (optional)";
+    attachmentName.textContent = "";
+    submitBtn.textContent = editing ? "Update" : "Disseminate";
+  }
+  function closeModal(){ modal.style.display = "none"; editing=null; form.reset(); }
+
+  openCreateBtn.addEventListener("click", ()=> openModal());
+  closeX.addEventListener("click", closeModal);
+  modal.addEventListener("click", (e)=> { if(e.target===modal) closeModal(); });
+
+  function openViewModal(a){
+  viewTitle.textContent = a.title || "(Untitled)";
+  viewMeta.textContent = `Posted on ${fmtDate(a.createdAt)} • ${a.category || "General"}`;
+  viewContent.textContent = a.content || "";
+
+  viewAttachment.innerHTML = "";
+
+if (a.attachmentName) {
+  const src = a.attachmentUrl || a.attachmentDataUrl;
+
+  viewAttachment.innerHTML = `
+    <div class="view-attachment-wrapper">
+      <strong>Attachment:</strong>
+      ${
+        src && a.attachmentType?.startsWith("image")
+          ? `<img src="${src}" alt="Attachment preview">`
+          : ""
+      }
+    
+    </div>
+  `;
+}
+
+
+
+  viewModal.style.display = "flex";
+}
+
+function closeViewModal(){
+  viewModal.style.display = "none";
+}
+
+closeViewBtn.addEventListener("click", closeViewModal);
+viewModal.addEventListener("click", e => {
+  if (e.target === viewModal) closeViewModal();
+});
+
+
+  // label -> filepicker for keyboard accessibility
+  // NOTE: remove the click listener to avoid double-opening the file picker.
+  // Clicking the <label for="attachment"> uses native behavior; the keydown lets keyboard users open it.
+  attachmentLabel.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      attachmentEl.click();
+    }
+  });
+
+  attachmentEl.addEventListener("change", ()=>{
+    const f = attachmentEl.files[0];
+    attachmentName.textContent = f ? `Selected: ${f.name}` : "";
+    if (f) attachmentLabel.textContent = f.name;
+    else attachmentLabel.textContent = "Click to choose a file (optional)";
+  });
+
+  // ===== rendering: include General too (no more hiding General posts) =====
+  function isTargetAnnouncement(a){
+    if (!a) return false;
+    if (a.category) {
+      const cat = String(a.category).toLowerCase();
+      return cat === "exit interview" || cat === "counseling" || cat === "general";
+    }
+    // fallback: keyword check in title/content
+    const txt = `${a.title||""} ${a.content||""}`.toLowerCase();
+    return txt.includes("exit interview") || txt.includes("counseling") || txt.includes("general");
+  }
+
+  function render(){
+    const q = (searchInput.value||"").toLowerCase().trim();
+    const rows = cache.filter(a => isTargetAnnouncement(a)).filter(a => {
+      if (!q) return true;
+      const hay = `${a.title||""} ${a.content||""} ${a.category||""} ${(a.attachmentName||"")}`.toLowerCase();
+      return hay.includes(q);
+    });
+
+    annBody.innerHTML = "";
+    if (!rows.length) {
+      annBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#666;padding:12px;">No exit interview or counseling announcements.</td></tr>`;
+      return;
+    }
+
+    rows.forEach(a=>{
+      const tr = document.createElement("tr");
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", () => openViewModal(a));
+
+
+      const tdTitle = document.createElement("td"); tdTitle.textContent = a.title || "(Untitled)";
+      const tdDate = document.createElement("td"); tdDate.textContent = fmtDate(a.createdAt);
+      const tdCat = document.createElement("td"); tdCat.textContent = a.category || "—";
+
+      const tdAtt = document.createElement("td");
+      let attCell = "—";
+      if (a.attachmentName) {
+        if (a.attachmentUrl) {
+          attCell = `<a class="attachment-file" href="${a.attachmentUrl}" target="_blank" rel="noopener">${esc(a.attachmentName)}</a>`;
+        } else if (a.attachmentDataUrl) {
+          attCell = `<a class="attachment-file" href="${a.attachmentDataUrl}" download="${esc(a.attachmentName)}" target="_blank" rel="noopener">${esc(a.attachmentName)}</a>`;
+        } else {
+          attCell = esc(a.attachmentName);
+        }
+      }
+      tdAtt.innerHTML = attCell;
+
+      const tdAct = document.createElement("td"); tdAct.className = "action-buttons";
+      // Guidance should be able to edit their own posts and delete them
+      const edit = document.createElement("button"); edit.textContent = "Edit";
+      edit.addEventListener("click", (e)=> {
+  e.stopPropagation();
+  openModal(a.id, a);
+});
+
+      const del = document.createElement("button"); del.textContent = "Delete";
+      // open confirm modal instead of deleting immediately
+      del.addEventListener("click", (e)=> {
+  e.stopPropagation();
+  showDeleteConfirm(a.id, a.title || "(Untitled)");
+});
+
+      tdAct.append(edit, del);
+      tr.append(tdTitle, tdDate, tdCat, tdAtt, tdAct);
+      annBody.appendChild(tr);
+    });
+  }
+
+  searchInput.addEventListener("input", render);
+
+  // ===== collection name resolver (same logic as Admin) =====
+  async function resolveCollectionName(){
+    try{ const s1 = await getDocs(query(collection(db,"announcements"),limit(1))); if (s1.size>0) return "announcements"; }catch{}
+    try{ const s2 = await getDocs(query(collection(db,"announcement"),limit(1))); if (s2.size>0) return "announcement"; }catch{}
+    return "announcements";
+  }
+
+  async function initAnnouncements(){
+  const col = await resolveCollectionName();
+
+  if (col !== COLLECTION && unsubscribe) {
+    unsubscribe();
+  }
+
+  COLLECTION = col;
+
+  const qAnn = query(
+    collection(db, COLLECTION),
+    where("postedBy", "==", "Guidance"), // ✅ GUIDANCE ONLY
+    orderBy("createdAt", "desc")
+  );
+
+  unsubscribe = onSnapshot(
+    qAnn,
+    snap => {
+      cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.log("Guidance announcements:", cache); // debug
+      render();
+    },
+    err => {
+      showError("Failed to load announcements", err);
+    }
+  );
+}
+  // ===== delete confirmation logic =====
+  // shows confirm modal and stores target id in dataset
+  function showDeleteConfirm(docId, titleText){
+    confirmModal.style.display = "flex";
+    confirmModal.setAttribute("aria-hidden", "false");
+    // include some meta to help user know what they're deleting
+    confirmMeta.textContent = titleText ? `Title: ${titleText}` : "";
+    confirmDeleteBtn.dataset.deleteId = docId;
+    // focus the cancel button for safe default
+    cancelDeleteBtn.focus();
+  }
+
+  function closeDeleteConfirm(){
+    confirmModal.style.display = "none";
+    confirmModal.setAttribute("aria-hidden", "true");
+    confirmDeleteBtn.removeAttribute("data-delete-id");
+    confirmMeta.textContent = "";
+  }
+
+  // cancel handler
+  cancelDeleteBtn.addEventListener("click", ()=> closeDeleteConfirm());
+
+  // clicking outside the box closes the modal (but keep prevent accidental closure optional)
+  confirmModal.addEventListener("click", (e)=>{
+    if (e.target === confirmModal) closeDeleteConfirm();
+  });
+
+  // confirm delete
+  confirmDeleteBtn.addEventListener("click", async ()=>{
+    const id = confirmDeleteBtn.dataset.deleteId;
+    if (!id) { closeDeleteConfirm(); return; }
+    try {
+      await deleteDoc(doc(db, COLLECTION, id));
+      closeDeleteConfirm();
+    } catch (err) {
+      showError("Delete failed", err);
+    }
+  });
+
+  // ===== submit handler: write to same collection and include category =====
+  async function onSubmit(e){
+    e.preventDefault();
+    const title = titleEl.value.trim();
+    const content = contentEl.value.trim();
+    const category = "General";
+    const file = attachmentEl.files[0] || null;
+
+    if (!title){ alert("Please provide a title."); titleEl.focus(); return; }
+    if (!content){ alert("Please provide content."); contentEl.focus(); return; }
+
+    if (file && file.size > MAX_INLINE_FILE_BYTES) {
+      alert(`File is too large (${Math.round(file.size/1024)} KB). Max inline size is ${Math.round(MAX_INLINE_FILE_BYTES/1024)} KB.\n\nPlease choose a smaller file or compress the image.`);
+      return;
+    }
+
+    const original = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = editing ? "Updating…" : "Publishing…";
+
+    try {
+      let attachmentFields = {
+        attachmentName: null,
+        attachmentType: null,
+        attachmentSize: null,
+        attachmentUrl: null,
+        attachmentDataUrl: null
+      };
+
+      if (file) {
+        const dataUrl = await fileToDataURL(file);
+        attachmentFields = {
+          attachmentName: sanitizeFileName(file.name),
+          attachmentType: file.type || "application/octet-stream",
+          attachmentSize: file.size || null,
+          attachmentUrl: null,
+          attachmentDataUrl: dataUrl
+        };
+      }
+
+      if (editing) {
+        const docRef = doc(db, COLLECTION, editing.id);
+        await updateDoc(docRef, {
+          title, content, category,
+          ...attachmentFields,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, COLLECTION), {
+        title,
+        content,
+        category,
+        postedBy: "Guidance", // ✅ IMPORTANT
+        ...attachmentFields,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || null,
+        smsSent: false
+      });
+      }
+
+      submitBtn.textContent = "Done!";
+      setTimeout(()=> submitBtn.textContent = original, 350);
+      form.reset();
+      attachmentLabel.textContent = "Click to choose a file (optional)";
+      attachmentName.textContent = "";
+      editing = null;
+      closeModal();
+    } catch (err) {
+      showError("Failed to save announcement", err);
+    } finally {
+      submitBtn.disabled = false;
+      if (submitBtn.textContent !== original) submitBtn.textContent = original;
+    }
+  }
+
+  form.addEventListener("submit", onSubmit);
+
+  // ===== auth guard: allow guidance and admin users =====
+  onAuthStateChanged(auth, async (user) => {
+    if (!user){ window.location.href = "Login.html"; return; }
+    try{
+      const prof = await getDoc(doc(db,"users",user.uid));
+      if (!prof.exists()) { await signOut(auth); window.location.href="Login.html"; return; }
+      const role = String(prof.data().role || "").toLowerCase();
+      if (role !== "guidance" && role !== "admin"){
+        // not allowed
+        await signOut(auth); window.location.href="Login.html"; return;
+      }
+      await initAnnouncements();
+    }catch(err){
+      console.error(err);
+      window.location.href = "Login.html";
+    }
+  });
+
+</script>
+</body>
+</html>

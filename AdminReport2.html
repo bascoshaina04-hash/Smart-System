@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminReport2.css">
+</head>
+<body>
+    <div class="sidebar">
+  <div class="logo">
+    <img src="icons/FInalLogo.png" alt="Logo"/>
+    <h2>Smart</h2>
+  </div>
+  <button onclick="window.location.href='AdminUI1.html'">Home</button>
+  <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+  <button onclick="window.location.href='AdminVio.html'">Violations</button>
+  <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+  <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+  <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+  <button class="active" onclick="window.location.href='AdminReport1.html'">Reports</button>
+</div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="user-container">
+      <div class="user-icon-container" onclick="toggleLogout()">
+        <img src="icons/user-icon.png" alt="User Icon" />
+      </div>
+      <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <h3>Download student violation data for documentation or analysis</h3>
+
+    <div class="group">
+    <div class="filter-group">
+      <button onclick="location.href='AdminReport1.html'" class="viorep">Violation Reports</button>
+      <button onclick="location.href='AdminReport2.html'" class="str active-btn">Student Record Reports</button>
+      <button onclick="location.href='AdminReport3.html'" class="viotrend">Violation Trends</button>
+    </div>
+    </div>
+
+    <div class="top-controls">
+  <div class="filter-container">
+  <select id="yearLevel">
+    <option value="">All Years</option>
+    <option value="1st Year">1st Year</option>
+    <option value="2nd Year">2nd Year</option>
+    <option value="3rd Year">3rd Year</option>
+    <option value="4th Year">4th Year</option>
+  </select>
+
+  <select id="course">
+    <option value="">All Courses</option>
+    <option value="BSIT">BSIT</option>
+    <option value="BSMET">BSMET</option>
+    <option value="BSTCM">BSTCM</option>
+    <option value="BSNAME">BSNAME</option>
+    <option value="BSESM">BSESM</option>
+  </select>
+</div>
+
+    <button class="dropdown-toggle" onclick="downloadPDF()">
+    Download PDF
+    </button>
+
+
+  <div class="search-container">
+    <input type="text" placeholder="Search...">
+  </div>
+</div>
+
+    <!-- Example Table (Report 1: Violation) -->
+     <div class="table-wrapper">
+    <table>
+  <thead>
+    <tr>
+      <th>Student Name</th>
+      <th>ID Number</th>
+      <th>Year Level</th>
+      <th>Course</th>
+      <th>Violations</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody id="studentBody"></tbody>
+</table>
+</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+/* ---------------- FIREBASE INIT ---------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+  authDomain: "smart-723de.firebaseapp.com",
+  projectId: "smart-723de",
+  storageBucket: "smart-723de.appspot.com",
+  messagingSenderId: "316347306734",
+  appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ---------------- STATE ---------------- */
+let allStudents = [];
+let filteredStudents = [];
+
+/* ---------------- DOM ---------------- */
+const tbody = document.getElementById("studentBody");
+const searchInput = document.querySelector(".search-container input");
+const yearSelect = document.getElementById("yearLevel");
+const courseSelect = document.getElementById("course");
+
+/* ---------------- RENDER ---------------- */
+function renderTable(rows) {
+  tbody.innerHTML = "";
+
+  if (!rows.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center;color:#666;padding:12px;">
+          No records found.
+        </td>
+      </tr>`;
+    return;
+  }
+
+  rows.forEach(s => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${s.fullName}</td>
+      <td>${s.studentID}</td>
+      <td>${s.yearLevel}</td>
+      <td>${s.course}</td>
+      <td>${s.violationCount}</td>
+      <td>${s.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.downloadPDF = function(){
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // export currently filtered rows
+  const rows = filteredStudents.length ? filteredStudents : allStudents;
+
+  if(!rows.length){
+    alert("No data to export.");
+    return;
+  }
+
+  const body = rows.map(s => [
+    s.fullName,
+    s.studentID,
+    s.yearLevel,
+    s.course,
+    s.violationCount,
+    s.status
+  ]);
+
+  doc.setFontSize(14);
+  doc.text("Student Record Report", 14, 15);
+
+  doc.autoTable({
+    head:[[
+      "Student Name",
+      "ID Number",
+      "Year Level",
+      "Course",
+      "Violations",
+      "Status"
+    ]],
+    body,
+    startY:20
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+
+  doc.save(`Student_Report_${today}.pdf`);
+
+};
+
+/* ---------------- FILTER LOGIC ---------------- */
+function applyFilters() {
+  const q = searchInput.value.toLowerCase().trim();
+  const year = yearSelect.value;
+  const course = courseSelect.value;
+
+  filteredStudents = allStudents.filter(s => {
+    const name = String(s.fullName || "").toLowerCase();
+    const id = String(s.studentID || "").toLowerCase();
+    const crs = String(s.course || "").toLowerCase();
+
+    const matchesSearch =
+      !q ||
+      name.includes(q) ||
+      id.includes(q) ||
+      crs.includes(q);
+
+    const matchesYear = !year || s.yearLevel === year;
+    const matchesCourse = !course || s.course === course;
+
+    return matchesSearch && matchesYear && matchesCourse;
+  });
+
+  renderTable(filteredStudents);
+}
+
+
+
+/* ---------------- LOAD DATA ---------------- */
+async function loadData() {
+  /* 1️⃣ FETCH STUDENTS FIRST */
+  const studentsSnap = await getDocs(collection(db, "students"));
+
+  const students = studentsSnap.docs.map(d => {
+    const data = d.data();
+
+    return {
+      uid: d.id,
+
+      // ✅ SAFE NAME MAPPING (NO MORE undefined)
+      fullName:
+        data.studentName ||
+        data.name ||
+        `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+
+      studentID: data.studentID,
+      yearLevel: data.yearLevel,
+      section: data.section,
+      course: data.course,
+
+      violationCount: 0,
+      status: "Active"
+    };
+  });
+
+  /* 2️⃣ FETCH VIOLATIONS */
+  const vioSnap = await getDocs(collection(db, "violations"));
+  const violations = vioSnap.docs.map(d => d.data());
+
+  /* 3️⃣ COUNT VIOLATIONS PER STUDENT */
+  students.forEach(s => {
+    s.violationCount = violations.filter(v =>
+      v.studentID === s.studentID
+    ).length;
+
+    if (s.violationCount >= 3) {
+      s.status = "Under Watch";
+    }
+  });
+
+  /* 4️⃣ SAVE + RENDER */
+  allStudents = students;
+  filteredStudents = students;
+  renderTable(students);
+}
+
+
+/* ---------------- EVENTS ---------------- */
+searchInput.addEventListener("input", applyFilters);
+yearSelect.addEventListener("change", applyFilters);
+courseSelect.addEventListener("change", applyFilters);
+
+/* ---------------- AUTH ---------------- */
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    alert("You are not logged in.");
+    return;
+  }
+  loadData();
+});
+</script>
+
+</body>
+</html>

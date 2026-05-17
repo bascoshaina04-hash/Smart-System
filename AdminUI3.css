@@ -1,0 +1,100 @@
+*{ box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+h2{ font-family: Genos, sans-serif; font-size: 50px; margin-bottom: 13px; }
+body{ background-color:#ffffff; display:flex; min-height:100vh; }
+.sidebar{ background-color:#020120; width:265px; padding:20px; color:white; }
+.logo{ display:flex; align-items:center; margin-bottom:20px; }
+.logo img{ width:70px; margin-right:10px; margin-top:-20px; }
+.sidebar button{ background-color:#fdb827; font-size:17px; border:none; color:black; padding:15px; width:95%; margin-bottom:10px; font-weight:bold; cursor:pointer; border-radius:8px; text-align:center; position:relative; margin-left:5px; }
+.sidebar button.active::after{ content:'◀'; color:white; position:absolute; right:-1px; top:50%; transform:translateY(-50%); font-size:18px; }
+.main-content{ flex-grow:1; padding:0; }
+.header{ display:flex; justify-content:flex-end; align-items:center; background-color:#020120; height:97px; padding:0 30px; }
+.user-container{ position:relative; }
+.user-icon-container{ width:50px; height:50px; background-color:#ccc; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.user-icon-container img{ width:40px; height:43px; border-radius:50%; object-fit:cover; }
+.logout{ position:absolute; top:60px; right:0; background-color:#fdb827; padding:10px 20px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; display:none; z-index:10; }
+
+/* Status Cards */
+.status-cards{ display:flex; gap:80px; margin-top:30px; margin-bottom:20px; margin-left:280px; }
+.card{ background-color:#241571; color:white; padding:20px 15px; border-radius:10px; width:190px; text-align:start; position:relative; }
+.bord{ background-color:#D9D9D9; width:50px; height:50px; border-radius:10px; }
+.card img{ width:35px; height:35px; margin-bottom:10px; margin-top:8px; margin-left:10px; }
+.card p{ font-size:30px; font-weight:bold; margin:10px 0 0; line-height:1.2; margin-left:60px; margin-top:-40px; }
+.card span{ font-size:16px; font-weight:normal; line-height:1.2; display:block; margin-top:10px; }
+.card button{ margin-top:10px; padding:5px 10px; background-color:#FFB400; border:none; border-radius:5px; font-weight:bold; cursor:pointer; margin-left:32px; width:100px; height:30px; color:black; }
+
+/* Tabs */
+.tabs{ display:flex; gap:5px; margin:20px 0; background-color:#241571; width:650px; margin-left:320px; border-radius:17px; }
+.tabs button{ padding:10px 15px; border:none; border-radius:20px; background-color:#241571; cursor:pointer; font-weight:bold; margin-left:30px; color:white; }
+.tabs .active{ background-color:#FFB400; color:black; width:170px; }
+
+/* Search */
+.search-container{ display:flex; justify-content:flex-end; margin-bottom:10px; margin-right:245px; }
+.search-container input{ padding:5px 10px; border-radius:8px; border:1px solid #ccc; }
+
+/* Table */
+/* ===== TABLE FIX ===== */
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+thead{
+  background:#273ea3;
+  color:#fff;
+}
+
+th, td{
+  padding:12px 16px;
+  border-bottom:1px solid #ddd;
+  font-size:14px;
+  vertical-align:top;
+  word-wrap:break-word;
+}
+
+
+th:nth-child(1), td:nth-child(1){
+  width:25%;
+  font-weight:600;
+}
+
+th:nth-child(2), td:nth-child(2){
+  width:15%;
+  white-space:nowrap;
+}
+
+th:nth-child(3), td:nth-child(3){
+  width:60%;
+  line-height:1.5;
+}
+
+
+/* Hover effect (clean) */
+tbody tr:hover{
+  background-color:#f7f9ff;
+}
+/* ===== TABLE SCROLL WRAPPER ===== */
+.table-wrapper{
+  width:60%;
+  margin-left:265px;     /* align with sidebar ONCE */
+  height:338px;          /* fixed height = internal scroll */
+  overflow-y:auto;       /* vertical scroll only */
+  overflow-x:hidden;
+  border-radius:12px;
+  border:1px solid #ddd;
+  background:#fff;
+}
+
+/* keep header visible while scrolling */
+.table-wrapper thead{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+.table-wrapper thead th{
+  position:sticky;
+  top:0;
+  z-index:3;
+}
+
+

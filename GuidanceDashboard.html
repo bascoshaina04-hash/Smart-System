@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Guidance Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial, sans-serif}
+    body{background:#fff;display:flex;min-height:100vh}
+    h2,h3{font-family:Genos, sans-serif}
+
+    /* Sidebar */
+    .sidebar{background:#020120;width:265px;padding:20px;color:#fff;flex-shrink:0}
+    .logo{display:flex;align-items:center;margin-bottom:20px}
+    .logo img{width:70px;margin-right:10px;margin-top:-20px;object-fit:contain}
+    .sidebar button{
+      background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;
+      width:95%;margin-bottom:10px;font-weight:700;cursor:pointer;border-radius:8px;
+      text-align:center;position:relative;margin-left:5px;
+    }
+    .sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+
+    /* top header */
+    .main-content{flex:1;padding:0}
+    .header{display:flex;justify-content:flex-end;align-items:center;background:#020120;height:97px;padding:0 30px}
+    .user-container{position:relative}
+    .user-icon-container{width:50px;height:50px;background:#ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .user-icon-container img{width:40px;height:43px;border-radius:50%;object-fit:cover}
+    .logout{position:absolute;top:60px;right:0;background:#fdb827;padding:10px 20px;border:none;border-radius:8px;font-weight:700;cursor:pointer;display:none;z-index:10}
+
+    /* NEW LAYOUT: left announcement large + right column for charts */
+    .dashboard-wrap{display:flex;gap:30px;padding:22px 28px}
+    /* left big announcement panel (square-ish) */
+    .ann-left{
+  background:#241571;
+  color:#fff;
+  border-radius:12px;
+  padding:18px 18px 20px 20px;
+  width:460px;
+  height:520px;              /* 🔥 FIXED HEIGHT */
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 6px 20px rgba(0,0,0,0.08);
+  position:relative;
+  margin-left:50px;
+}
+
+    .ann-top {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      width:100%;
+      
+    }
+    .ann-left .ann-title{font-family:Genos;font-size:30px;font-weight:700;margin:6px 0}
+    .ann-left .ann-sub{opacity:0.95;margin-top:6px;font-size:13px}
+    
+
+    /* inline small cards inside announcement panel - compact */
+    .ann-cards-inline{display:flex;gap:100px;align-items:center; margin-left: 300px}
+    .ann-inline-card{
+      background:#241571;color:#fff;border-radius:10px;padding:10px 20px;width:240px;height:150px;
+      display:flex;gap:10px;align-items:center;border:1px solid rgba(255,255,255,0.03);
+    }
+    .ann-inline-card .bord{background:#D9D9D9;width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .ann-inline-card .bord img{width:26px;height:26px}
+    .ann-inline-card .txt{font-size:16px;color:#fff}
+    .ann-inline-card .txt strong{display:block;font-weight:800;font-size:35px;margin-bottom:2px}
+
+    /* announcements inside left panel (list) */
+    .ann-list{
+  width:100%;                /* 🔥 IMPORTANT */
+  margin-top:-100px;
+  overflow-y:auto;
+  flex:1;
+  padding-right:6px;
+  box-sizing:border-box;
+}
+
+.ann-card{
+  background:#fff;
+  color:#111;
+  border-radius:8px;
+  padding:10px 10px;
+  margin-bottom:10px;
+
+  width:100%;               /* 🔥 fill container */
+  box-sizing:border-box;
+
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:break-word;
+}    
+.ann-card .title{
+  font-weight:700;
+  color:#241571;
+  margin-top: -30px;
+
+}
+
+.ann-card .date{
+  font-size:12px;
+  color:#666;
+  margin-top:-35px;
+}
+.ann-card .content{
+  margin-top:-20px;
+  padding:14px 16px;
+
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+
+  color:#0f172a;
+  line-height:1.6;
+  font-size:15px;
+
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:break-word;
+}
+
+    /* right column (charts) */
+    .right-col{flex:1;display:flex;flex-direction:column;gap:5px; margin-top: 170px; margin-left: 20px;}
+    /* charts row under small cards */
+    .charts-row{display:flex;gap:70px;justify-content:flex-start;align-items:flex-start;margin-top:6px}
+    .chart-circle{width:280px;height:280px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .chart-circle canvas{width:240px!important;height:240px!important;background:transparent;border-radius:50%}
+    .chart-label{text-align:center;margin-top:10px;font-weight:700;color:#241571;font-family:Genos; font-size: 30px;}
+
+    /* responsive */
+    @media (max-width:1200px){
+      .ann-left{width:400px;min-height:320px}
+      .chart-circle{width:240px;height:240px}
+      .chart-circle canvas{width:200px!important;height:200px!important}
+    }
+    @media (max-width:900px){
+      .dashboard-wrap{flex-direction:column; padding:12px}
+      .ann-left{width:100%;min-height:220px}
+      .charts-row{justify-content:space-between;padding-left:0}
+      .ann-list{max-height:140px}
+      .chart-circle{width:200px;height:200px}
+      .chart-circle canvas{width:170px!important;height:170px!important}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo" onerror="this.style.display='none'"/>
+      <h2 style="font-size: 24px;">Smart</h2>
+    </div>
+    <button class="active" onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button onclick="window.location.href='GuidanceExit.html'">Exit Interview</button>
+    <button onclick="window.location.href='GuidanceAppoint.html'">Appointments</button>
+    <button onclick="window.location.href='GuidanceConsult.html'">Consultations</button>
+    <button onclick="window.location.href='GuidanceAnn.html'">Announcements</button>
+    <button onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <!-- main -->
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User" onerror="this.style.display='none'"/>
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="dashboard-wrap">
+
+      <!-- left: big announcement with inline small cards -->
+      <div class="ann-left" role="region" aria-label="Announcements">
+        <div class="ann-top">
+          <div>
+            <div class="ann-title">Announcements</div>
+          </div>
+
+          <!-- small cards placed inside announcement panel (compact, side by side) -->
+          <div class="ann-cards-inline" aria-hidden="false">
+            <div class="ann-inline-card" title="Pending consultations">
+              <div class="bord"><img src="icons/user-icon.png" alt="consult"/></div>
+              <div class="txt"><strong id="pending-consult">0</strong><span>Pending<br>Consultations</span></div>
+            </div>
+
+            <div class="ann-inline-card" title="Pending exit interviews">
+              <div class="bord"><img src="icons/certificate.png" alt="exit"/></div>
+              <div class="txt"><strong id="pending-exit">0</strong><span>Pending<br>Exit interview</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- announcements list (newest appear on top) -->
+        <div id="annList" class="ann-list"></div>
+      </div>
+
+      <!-- right: bigger charts -->
+      <div class="right-col">
+        <div class="charts-row" aria-label="Charts">
+          <div>
+            <div class="chart-circle">
+              <canvas id="consultChart" aria-label="Consultation status pie"></canvas>
+            </div>
+            <div class="chart-label">Consultation</div>
+          </div>
+
+          <div>
+            <div class="chart-circle">
+              <canvas id="exitChart" aria-label="Exit interview status pie"></canvas>
+            </div>
+            <div class="chart-label">Exit Interview</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- logout modal -->
+  <div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:#fff;padding:28px;border-radius:10px;width:320px;text-align:center">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div style="margin-top:18px">
+        <button onclick="logoutYes()" style="background:#fdb827;padding:10px 18px;border-radius:6px;border:none;font-weight:700;cursor:pointer">Yes</button>
+        <button onclick="closeLogout()" style="background:#ccc;padding:10px 18px;border-radius:6px;border:none;margin-left:10px;cursor:pointer">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase + Chart logic (unchanged behavior) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  limit,
+  Timestamp,
+  doc,
+  getDoc,
+  getDocs,        // ✅ ADDED
+  updateDoc       // ✅ ADDED
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    async function handleLogout() {
+  try {
+    const logId = localStorage.getItem("activeLoginLogId");
+
+    if (logId) {
+      await updateDoc(doc(db, "login_logs", logId), {
+        logoutTime: new Date().toLocaleString(),
+        status: "Logged Out"
+      });
+    }
+
+    localStorage.removeItem("activeLoginLogId");
+  } catch (err) {
+    console.error("Logout logging failed:", err);
+  }
+
+  await signOut(auth);
+  window.location.href = "Login.html";
+}
+
+window.logoutYes = handleLogout;
+
+
+
+    const annList = document.getElementById("annList");
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+    function fmtDate(ts){ if(!ts) return "—"; const d = ts instanceof Timestamp ? ts.toDate() : new Date(ts); return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+
+    function renderAnnouncements(items){
+      if (!items || !items.length){
+        annList.innerHTML = `<div style="color:#fff;opacity:0.9;text-align:center">No announcements.</div>`;
+        return;
+      }
+      // items are expected to be already ordered newest-first (query uses createdAt desc)
+      annList.innerHTML = items.map(a=>`
+        <div class="ann-card">
+          <div class="title">${escapeHtml(a.title||"Untitled")}</div>
+          <div class="date">Posted: ${fmtDate(a.createdAt)}</div>
+          <div class="content">${escapeHtml(a.content||a.body||"")}</div>
+        </div>
+      `).join("");
+    }
+
+  function listenAnnouncements(){
+  const qAnn = query(
+  collection(db, "announcements"),
+  where("postedBy", "==", "Guidance"),
+  limit(10)
+);
+
+
+  onSnapshot(qAnn, snap => {
+    const items = snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+
+    renderAnnouncements(items);
+  });
+}
+
+
+    function mapStatus(raw){
+      if (!raw) return 'Other';
+      const v = String(raw).toLowerCase();
+      if (v.includes('approve')||v.includes('resolved')||v.includes('approved')) return 'Approved';
+      if (v.includes('pending')) return 'Pending';
+      if (v.includes('cancel')) return 'Cancelled';
+      if (v.includes('reject')) return 'Rejected';
+      return 'Other';
+    }
+
+    // charts
+    const consultCtx = document.getElementById('consultChart').getContext('2d');
+    const exitCtx = document.getElementById('exitChart').getContext('2d');
+    const labels = ['Approved','Pending','Cancelled','Rejected','Other'];
+    const palette = ['#4CAF50','#FBC02D','#f44336','#FF0000','#9E9E9E'];
+
+    function createPie(ctx){
+      return new Chart(ctx, {
+        type:'pie',
+        data:{labels, datasets:[{data:[0,0,0,0,0], backgroundColor:palette, borderWidth:0}]},
+        options:{
+          responsive:true,
+          maintainAspectRatio:false,
+          plugins:{
+            legend:{display:false},
+            tooltip:{enabled:true}
+          }
+        }
+      });
+    }
+
+    function updateChart(chart, counts){
+      const data = labels.map(l => counts[l] || 0);
+      chart.data.datasets[0].data = data;
+      chart.update();
+    }
+
+    function subscribeStatusCounts(purpose, onUpdate){
+      const q = query(collection(db,"appointments"), where("office","==","guidance"), where("purpose","==", purpose));
+      return onSnapshot(q, snap => {
+        const counts = {'Approved':0,'Pending':0,'Cancelled':0,'Rejected':0,'Other':0};
+        snap.docs.forEach(d=>{ const s = d.data()?.status; counts[ mapStatus(s) ] = (counts[ mapStatus(s) ]||0) + 1; });
+        onUpdate(counts);
+      }, err => { console.error(err); onUpdate({'Approved':0,'Pending':0,'Cancelled':0,'Rejected':0,'Other':0}); });
+    }
+
+    // pending counters (update the two small cards inside announcement panel)
+    const $ = id => document.getElementById(id);
+    function setupPendingCounts(){
+      const qCons = query(collection(db,"appointments"), where("office","==","guidance"), where("purpose","==","Consultation"), where("status","==","pending"));
+      onSnapshot(qCons, snap => { $("pending-consult").textContent = snap.size; }, ()=>{ $("pending-consult").textContent = "0"; });
+
+      const qExit = query(collection(db,"appointments"), where("office","==","guidance"), where("purpose","==","Exit Interview"), where("status","==","pending"));
+      onSnapshot(qExit, snap => { $("pending-exit").textContent = snap.size; }, ()=>{ $("pending-exit").textContent = "0"; });
+    }
+
+    // init on auth
+    onAuthStateChanged(auth, user => {
+      if (!user) return window.location.href = "Login.html";
+      const consultChart = createPie(consultCtx);
+      const exitChart = createPie(exitCtx);
+
+      const unsubC = subscribeStatusCounts("Consultation", counts => updateChart(consultChart, counts));
+      const unsubE = subscribeStatusCounts("Exit Interview", counts => updateChart(exitChart, counts));
+
+      listenAnnouncements();
+      setupPendingCounts();
+
+      window.addEventListener('beforeunload', ()=>{ try{unsubC && unsubC(); unsubE && unsubE();}catch{} });
+    });
+
+    // header helpers
+    window.toggleLogout = ()=>{ const b=document.getElementById("logoutBtn"); b.style.display = b.style.display==="block" ? "none" : "block"; };
+    window.openLogout = ()=> document.getElementById("modalOverlay").style.display = "flex";
+    window.closeLogout = ()=> document.getElementById("modalOverlay").style.display = "none";
+    window.logoutNow = async ()=>{ await signOut(auth); window.location.href = "Login.html"; };
+  </script>
+
+  
+
+</body>
+</html>

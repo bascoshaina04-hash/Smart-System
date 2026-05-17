@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminReport1.css">
+</head>
+<body>
+    <div class="sidebar">
+  <div class="logo">
+    <img src="icons/FInalLogo.png" alt="Logo"/>
+    <h2>Smart</h2>
+  </div>
+  <button onclick="window.location.href='AdminUI1.html'">Home</button>
+  <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+  <button onclick="window.location.href='AdminVio.html'">Violations</button>
+  <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+  <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+  <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+  <button class="active" onclick="window.location.href='AdminReport1.html'">Reports</button>
+</div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="user-container">
+      <div class="user-icon-container" onclick="toggleLogout()">
+        <img src="icons/user-icon.png" alt="User Icon" />
+      </div>
+      <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <h3>Download student violation data for documentation or analysis</h3>
+
+    <div class="group">
+    <div class="filter-group">
+      <button onclick="location.href='AdminReport1.html'" class="viorep active-btn">Violation Reports</button>
+      <button onclick="location.href='AdminReport2.html'" class="str">Student Record Reports</button>
+      <button onclick="location.href='AdminReport3.html'" class="viotrend">Violation Trends</button>
+    </div>
+    </div>
+
+    <div class="top-controls">
+        <div class="filter-container">
+          <div class="dropdown">
+            <button onclick="toggleDateDropdown()" class="dropdown-toggle">Select Date Range</button>
+            <div class="dropdown-menu" id="dateDropdown">
+              <label>From:</label>
+              <input type="date" id="startDate"><br>
+              <label>To:</label>
+              <input type="date" id="endDate"><br>
+              <button onclick="applyDateFilter()">Filter</button>
+            </div>
+          </div>
+
+          <!-- ✅ NEW DOWNLOAD BUTTON -->
+        <button class="dropdown-toggle" onclick="downloadPDF()">
+          Download PDF
+        </button>
+        </div>
+
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search...">
+        </div>
+      </div>
+
+    <!-- Example Table (Report 1: Violation) -->
+    <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>ID Number</th>
+          <th>Violation</th>
+          <th>Date</th>
+          <th>Sanction</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      
+      <tbody id="violationBody"></tbody>
+    </table>
+  </div>
+
+  
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+
+    <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    onSnapshot,
+    query,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+  let allRows = [];   // holds all fetched violations
+  let filteredRows = [];
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const tbody = document.getElementById("violationBody");
+
+  function fmtDate(ts) {
+    if (!ts) return "—";
+    if (typeof ts.toDate === "function") ts = ts.toDate();
+    const y = ts.getFullYear();
+    const m = String(ts.getMonth() + 1).padStart(2, "0");
+    const d = String(ts.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function renderRows(rows) {
+    tbody.innerHTML = "";
+
+    if (!rows.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center;color:#666;padding:12px;">
+            No violation records found.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    rows.forEach(v => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${v.studentName || "—"}</td>
+        <td>${v.studentID || "—"}</td>
+        <td>${v.violation || "—"}</td>
+        <td>${fmtDate(v.date)}</td>
+        <td>${v.sanction || "—"}</td>
+        <td>${v.status || "Pending"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const searchInput = document.getElementById("searchInput");
+
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.toLowerCase().trim();
+  const source = filteredRows.length ? filteredRows : allRows;
+
+  const searched = source.filter(v =>
+    [v.studentName, v.studentID, v.violation, v.sanction, v.status]
+      .some(val => String(val || "").toLowerCase().includes(q))
+  );
+
+  renderRows(searched);
+});
+
+
+window.downloadPDF = function () {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Decide what rows to export (what's currently visible)
+  let rowsToExport = [];
+
+  const searchValue = searchInput.value.trim();
+  if (searchValue || filteredRows.length) {
+    rowsToExport = filteredRows.length ? filteredRows : allRows;
+  } else {
+    rowsToExport = allRows;
+  }
+
+  if (!rowsToExport.length) {
+    alert("No data to export.");
+    return;
+  }
+
+  // Table headers
+  const head = [[
+    "Student Name",
+    "ID Number",
+    "Violation",
+    "Date",
+    "Sanction",
+    "Status"
+  ]];
+
+  // Table body
+  const body = rowsToExport.map(v => [
+    v.studentName || "—",
+    v.studentID || "—",
+    v.violation || "—",
+    fmtDate(v.date),
+    v.sanction || "—",
+    v.status || "Pending"
+  ]);
+
+  // Title
+  doc.setFontSize(14);
+  doc.text("Student Violation Report", 14, 15);
+
+  // Generate table
+  doc.autoTable({
+    head,
+    body,
+    startY: 20,
+    styles: {
+      fontSize: 9,
+      cellPadding: 3
+    },
+    headStyles: {
+      fillColor: [39, 62, 163] // blue header
+    }
+  });
+
+  // Filename with date
+  const today = new Date().toISOString().slice(0, 10);
+  doc.save(`Violation_Report_${today}.pdf`);
+};
+
+
+
+  // 🔥 REAL-TIME LISTENER
+  const q = query(
+    collection(db, "violations"),
+   orderBy("createdAt", "desc")
+
+  );
+
+  onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    alert("You are not logged in.");
+    return;
+  }
+
+  onSnapshot(q, (snap) => {
+    const rows = snap.docs.map(d => {
+  const data = d.data();
+
+  // ✅ normalize date into JS Date
+  let rawDate = data.date || data.createdAt;
+  let normalizedDate = null;
+
+  if (rawDate?.toDate) {
+    normalizedDate = rawDate.toDate();
+  } else if (rawDate) {
+    normalizedDate = new Date(rawDate);
+  }
+
+  return {
+    studentName: data.studentName || data.name,
+    studentID: data.studentID || data.studentId,
+    violation: data.violation || data.violationType,
+    date: normalizedDate, // 🔥 ALWAYS JS Date
+    sanction: data.sanction,
+    status: (() => {
+  const s = String(data.status || "").toLowerCase();
+
+  if (s === "ongoing") return "Pending";
+  if (s === "open") return "Pending";
+
+  return data.status || "Pending";
+})()
+  };
+});
+
+
+    allRows = rows;
+    renderRows(filteredRows.length ? filteredRows : allRows);
+
+  }, (err) => {
+    console.error("Failed to fetch violations:", err);
+    alert("Failed to load violation records.");
+  });
+});
+
+
+  // -------------------------
+  // Existing date dropdown logic
+  // -------------------------
+  window.toggleDateDropdown = function () {
+    const dropdown = document.getElementById("dateDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  };
+
+  window.applyDateFilter = function () {
+  const start = document.getElementById("startDate").value;
+  const end = document.getElementById("endDate").value;
+
+  if (!start || !end) {
+    alert("Please select both start and end dates.");
+    return;
+  }
+
+  const startDate = new Date(start);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(end);
+  endDate.setHours(23, 59, 59, 999);
+
+  filteredRows = allRows.filter(v => {
+    if (!(v.date instanceof Date)) return false;
+    return v.date >= startDate && v.date <= endDate;
+  });
+
+  renderRows(filteredRows);
+  document.getElementById("dateDropdown").style.display = "none";
+};
+
+
+function resetAllFilters() {
+  filteredRows = [];
+  searchInput.value = "";
+  renderRows(allRows);
+}
+
+
+
+  window.addEventListener("click", function (event) {
+    const dropdown = document.getElementById("dateDropdown");
+    if (!event.target.closest(".dropdown")) {
+      dropdown.style.display = "none";
+    }
+  });
+</script>
+
+
+</body>
+</html>

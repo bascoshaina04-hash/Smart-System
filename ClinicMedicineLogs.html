@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clinic Medicine Logs</title>
+
+  <!-- Fonts / icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="ClinicMedicineLogs.css">
+</head>
+<body>
+
+  <div id="banner" role="status" aria-live="polite"><span id="bannerText"></span> <button id="dismissBanner">OK</button></div>
+
+  <aside class="sidebar" aria-label="Main sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Smart logo">
+      <h2>Smart</h2>
+    </div>
+    <button class="nav-btn" onclick="location.href='ClinicDashboard.html'">Home</button>
+    <button class="nav-btn" onclick="location.href='ClinicHealthReport.html'">Health Report</button>
+    <button class="nav-btn active" onclick="location.href='ClinicMedicineLogs.html'">Medicine Logs</button>
+    <button class="nav-btn" onclick="location.href='ClinicGenerateReport.html'">Generate Report</button>
+  </aside>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="signOutUser()" style="display:none;">Logout</button>
+      </div>
+    </div>
+
+    <main>
+      <div class="content">
+        <div class="controls">
+          <div class="controls-left">
+            <button id="openModalBtn" class="btn-new"><i class="fas fa-plus"></i> Add Medicine</button>
+          </div>
+          <div class="controls-right">
+            <button id="generateBtn" class="btn-generate"><i class="fas fa-print"></i> Generate</button>
+          </div>
+        </div>
+
+        <div class="table-container" role="region" aria-label="Medicine logs table">
+          <table id="reportsTable" class="recents-table" role="table" aria-label="Medicine logs">
+            <thead>
+            <tr>
+              <th style="width:130px">Code</th>
+              <th style="width:220px">Medicine Name</th>
+              <th style="width:200px">Form</th>
+              <th style="width:120px">Strength</th>
+              <th style="width:180px">On-hand</th>
+              <th style="width:160px">Expiration</th>
+              <th style="width:200px">Nurse</th>
+            </tr>
+            </thead>
+            <tbody id="reportsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal" role="document" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Add Medicine</h2>
+      <form id="medicineForm" class="modal-form" autocomplete="off" novalidate>
+        <div class="form-control"><input type="text" id="codeInput" name="code" placeholder="Code (e.g. PAR-500)" required /></div>
+        <div class="form-control"><input type="text" id="medNameInput" name="medicineName" placeholder="Medicine Name" required /></div>
+        <div class="form-control"><input type="text" id="formInput" name="form" placeholder="Form (e.g. Tablet)" required /></div>
+        <div class="form-control"><input type="text" id="strengthInput" name="strength" placeholder="Strength (e.g. 500 mg)" required /></div>
+        <div class="form-control full-span"><input type="text" id="onhandInput" name="onhand" placeholder="On-hand (e.g. 1240 pcs)" required /></div>
+        <div class="form-control full-span"><input type="date" id="expirationInput" name="expiration" placeholder="Expiration Date" required /></div>
+        <div class="form-control full-span"><input type="text" id="nurseInput" name="nurse" placeholder="Nurse Name (Who gave the medicine)" required /></div>
+        <div class="modal-actions full-span">
+          <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn-submit" id="submitBtn">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Export Modal -->
+  <div id="confirmExportModal" aria-hidden="true">
+    <div class="confirmBox" role="dialog" aria-modal="true" aria-labelledby="confirmExportTitle">
+      <h3 id="confirmExportTitle">Are you sure you want to generate this Clinic Medicine Report?</h3>
+      <p style="color:#444; margin-top:6px;">This will download a PDF of the visible table rows.</p>
+      <div class="confirmActions">
+        <button class="no" id="confirmNoBtn">No</button>
+        <button class="yes" id="confirmYesBtn">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase v11 imports (unchanged) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, getDocs
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // DOM helpers
+    const $ = id => document.getElementById(id);
+    const banner = $('banner');
+    const bannerText = $('bannerText');
+    const dismissBanner = $('dismissBanner');
+    const openModalBtn = $('openModalBtn');
+    const modalBackdrop = $('modalBackdrop');
+    const cancelBtn = $('cancelBtn');
+    const medicineForm = $('medicineForm');
+    const reportsTbody = $('reportsTbody');
+    const submitBtn = $('submitBtn');
+    const logoutBtn = $('logoutBtn');
+    const generateBtn = $('generateBtn');
+    const confirmModal = $('confirmExportModal');
+    const confirmYesBtn = $('confirmYesBtn');
+    const confirmNoBtn = $('confirmNoBtn');
+
+    dismissBanner.addEventListener('click', ()=> banner.style.display='none');
+
+    // Modal open/close
+    function openModal(){ modalBackdrop.style.display='flex'; modalBackdrop.setAttribute('aria-hidden','false'); setTimeout(()=>$('codeInput').focus(),50); }
+    function closeModal(){ modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true'); medicineForm.reset(); }
+    openModalBtn.addEventListener('click', openModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e)=> { if (e.target === modalBackdrop) closeModal(); });
+    document.addEventListener('keydown', (e)=> { if (e.key === 'Escape' && modalBackdrop.style.display === 'flex') closeModal(); });
+
+    // helpers
+    function showBanner(msg){ bannerText.textContent = msg; banner.style.display = 'block'; }
+    function hideBanner(){ banner.style.display = 'none'; }
+
+    // Render row for medicine (matches the columns)
+    function addMedicineRow(report){
+      const tr = document.createElement('tr');
+      const tdCode = document.createElement('td'); tdCode.textContent = report.code || ''; tr.appendChild(tdCode);
+      const tdName = document.createElement('td'); tdName.textContent = report.medicineName || ''; tr.appendChild(tdName);
+      const tdForm = document.createElement('td'); tdForm.textContent = report.form || ''; tr.appendChild(tdForm);
+      const tdStrength = document.createElement('td'); tdStrength.textContent = report.strength || ''; tr.appendChild(tdStrength);
+      const tdOnhand = document.createElement('td'); tdOnhand.textContent = report.onhand || ''; tr.appendChild(tdOnhand);
+      const tdExp = document.createElement('td'); tdExp.textContent = report.expiration || ''; tr.appendChild(tdExp);
+      const tdNurse = document.createElement('td'); tdNurse.textContent = report.nurse || ''; tr.appendChild(tdNurse);
+      if (reportsTbody.firstChild) reportsTbody.insertBefore(tr, reportsTbody.firstChild);
+      else reportsTbody.appendChild(tr);
+    }
+
+    // Populate table from a list of documents (docs is array of doc snapshots or plain objects)
+    function renderFromDocsArray(docs) {
+      reportsTbody.innerHTML = '';
+      if (!docs || docs.length === 0) {
+        // show empty row
+        reportsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#666;padding:12px;">No medicine logs found.</td></tr>';
+        return;
+      }
+      docs.forEach(d => {
+        // if doc is a snapshot
+        const data = (typeof d.data === 'function') ? (d.data() || {}) : d;
+        addMedicineRow({
+          id: d.id || null,
+          code: data.code,
+          medicineName: data.medicineName,
+          form: data.form,
+          strength: data.strength,
+          onhand: data.onhand,
+          expiration: data.expiration,
+          nurse: data.nurse
+        });
+      });
+    }
+
+    // realtime listener for medicine_logs with robust fallback
+    let unsubscribe = null;
+    async function startRealtimeListener(){
+      // clear table immediately
+      reportsTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;padding:12px;">Loading...</td></tr>';
+
+      try {
+        const q = query(collection(db,'medicine_logs'), orderBy('createdAt','desc'));
+        // Create realtime listener
+        unsubscribe = onSnapshot(q, (snap) => {
+          // success: render docs from snapshot
+          const docs = snap.docs || [];
+          if (docs.length === 0) {
+            renderFromDocsArray([]);
+          } else {
+            renderFromDocsArray(docs);
+          }
+          // hide any previous banner
+          hideBanner();
+          console.log('Realtime snapshot received, docs:', docs.length);
+        }, async (err) => {
+          // onSnapshot error callback
+          console.error('onSnapshot error for medicine_logs:', err);
+          // show friendly non-blocking banner
+          showBanner('Realtime update failed — check console.');
+          // fallback: try one-time fetch with getDocs
+          try {
+            console.log('Attempting fallback one-time getDocs() read for medicine_logs...');
+            const q2 = query(collection(db,'medicine_logs'), orderBy('createdAt','desc'));
+            const snap2 = await getDocs(q2);
+            if (!snap2.empty) {
+              renderFromDocsArray(snap2.docs);
+              console.log('Fallback getDocs succeeded, docs:', snap2.size);
+            } else {
+              renderFromDocsArray([]);
+              console.log('Fallback getDocs returned no documents.');
+            }
+          } catch (getErr) {
+            console.error('Fallback getDocs failed:', getErr);
+            // If even getDocs fails, show message and leave the banner visible
+            showBanner('Failed to load medicine logs. See console for details.');
+            // clear table to empty state
+            renderFromDocsArray([]);
+          }
+        });
+
+        // onSnapshot successfully registered (no immediate errors). Nothing else to do here.
+      } catch (e) {
+        // synchronous errors when setting up the listener
+        console.error('Failed to start onSnapshot listener:', e);
+        showBanner('Realtime setup failed — attempting one-time load.');
+        // fallback one-time read
+        try {
+          const q = query(collection(db,'medicine_logs'), orderBy('createdAt','desc'));
+          const snap = await getDocs(q);
+          if (!snap.empty) renderFromDocsArray(snap.docs);
+          else renderFromDocsArray([]);
+        } catch (err) {
+          console.error('Fallback getDocs also failed:', err);
+          showBanner('Failed to load medicine logs. See console.');
+          renderFromDocsArray([]);
+        }
+      }
+    }
+
+    // save medicine to Firestore (medicine_logs collection)
+    async function saveMedicine(payload){
+      await addDoc(collection(db,'medicine_logs'), {
+        ...payload,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid || null
+      });
+    }
+
+    // submit handler for Add Medicine form
+    medicineForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      const oldText = submitBtn.textContent;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        const code = $('codeInput').value.trim();
+        const medName = $('medNameInput').value.trim();
+        const formVal = $('formInput').value.trim();
+        const strength = $('strengthInput').value.trim();
+        const onhand = $('onhandInput').value.trim();
+        const expirationISO = $('expirationInput').value; // date input -> YYYY-MM-DD
+        const nurse = $('nurseInput').value.trim();
+
+        if (!code || !medName || !formVal || !strength || !onhand || !expirationISO) {
+          showBanner('Please fill all required fields.');
+          return;
+        }
+
+        if (!code || !medName || !formVal || !strength || !onhand || !expirationISO || !nurse) {
+        showBanner('Please fill all required fields.');
+        return;
+        }
+
+        // format expiration as readable
+        const [y,m,d] = expirationISO.split('-').map(Number);
+        const dt = new Date(y, m-1, d);
+        const formattedExp = dt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const payload = {
+          code,
+          medicineName: medName,
+          form: formVal,
+          strength,
+          onhand,
+          expiration: formattedExp,
+          nurse
+        };
+
+        await saveMedicine(payload);
+        closeModal();
+      } catch (err) {
+        console.error('Save failed', err);
+        // If permission denied, show a clearer message
+        if (err && err.code === 'permission-denied') {
+          showBanner('Permission denied: cannot save. Check Firestore rules and your user role.');
+        } else {
+          showBanner('Failed to save medicine. Check console.');
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = oldText;
+      }
+    });
+
+    // signOut helper (for header logout button)
+    function signOutUser(){ signOut(auth).catch(err => console.error('Sign-out failed', err)); }
+    window.signOutUser = signOutUser;
+    window.toggleLogout = function(){ logoutBtn.style.display = logoutBtn.style.display === 'block' ? 'none' : 'block'; }
+
+    // Require auth like AdminAnn: redirect to Login.html if no authenticated user
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn('No auth user — redirecting to Login.html');
+        window.location.href = 'Login.html';
+        return;
+      }
+      try {
+        const prof = await getDoc(doc(db,'users', user.uid));
+        logoutBtn.style.display = 'block';
+      } catch (err) {
+        console.warn('Could not fetch profile; proceeding', err);
+      }
+      // start listener (tries realtime, falls back to one-time read)
+      startRealtimeListener();
+    });
+
+    // Hook Generate button to show confirm dialog
+    generateBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'flex';
+      confirmModal.setAttribute('aria-hidden','false');
+    });
+    confirmNoBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      confirmModal.setAttribute('aria-hidden','true');
+    });
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        confirmModal.style.display = 'none';
+        confirmModal.setAttribute('aria-hidden','true');
+      }
+    });
+  </script>
+
+  <!-- jsPDF + autoTable (only PDF) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Export PDF logic -->
+  <script>
+    function gatherTableData() {
+      const table = document.getElementById('reportsTable');
+      if (!table) return { headers: [], rows: [] };
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      const rows = [];
+      Array.from(table.querySelectorAll('tbody tr')).forEach(tr => {
+        if (getComputedStyle(tr).display === 'none') return;
+        const cells = Array.from(tr.children).map(td => {
+          const a = td.querySelector('a');
+          if (a) return a.textContent.trim();
+          return td.textContent.trim();
+        });
+        rows.push(cells);
+      });
+      return { headers, rows };
+    }
+
+    async function generatePDFFile(filename) {
+      const { jsPDF } = window.jspdf;
+      const { headers, rows } = gatherTableData();
+      const doc = new jsPDF('landscape', 'pt', 'letter');
+      const title = 'Clinic Medicine Logs';
+      doc.setFontSize(14);
+      doc.text(title, 40, 40);
+
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: 60,
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [47, 83, 176], textColor: 255, halign: 'left' },
+        theme: 'grid'
+      });
+
+      doc.save(filename || 'clinic_medicine_logs.pdf');
+    }
+
+    // When user confirms "Yes" — generate and download PDF immediately
+    document.getElementById('confirmYesBtn').addEventListener('click', async () => {
+      const modal = document.getElementById('confirmExportModal');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden','true');
+      try {
+        await generatePDFFile('clinic_medicine_logs.pdf');
+      } catch (err) {
+        console.error('PDF generation failed', err);
+        window.showBanner && window.showBanner('PDF export failed. Check console.');
+      }
+    });
+  </script>
+</body>
+</html>

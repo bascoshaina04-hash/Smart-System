@@ -1,0 +1,415 @@
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+h2{font-family:Genos,sans-serif;font-size:50px;margin-bottom:13px}
+body{background:#fff;display:flex;min-height:100vh; overflow: hidden;}
+.sidebar{background:#020120;width:265px;padding:20px;color:#fff}
+.logo{display:flex;align-items:center;margin-bottom:20px}
+.logo img{width:70px;margin-right:10px;margin-top:-20px}
+.sidebar button{background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;width:95%;margin-bottom:10px;font-weight:bold;cursor:pointer;border-radius:8px;text-align:center;position:relative;margin-left:5px}
+.sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+.main-content{flex-grow:1;padding:0; overflow: visible;}
+.header{display:flex;justify-content:flex-end;align-items:center;background:#020120;height:97px;padding:0 30px}
+.user-container{position:relative}
+.user-icon-container{width:50px;height:50px;background:#ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.user-icon-container img{width:40px;height:43px;border-radius:50%;object-fit:cover}
+.logout{position:absolute;top:60px;right:0;background:#fdb827;padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;display:none;z-index:10}
+.top-controls{display:flex;justify-content:space-between;align-items:center;margin:90px 182px 20px 200px}
+.search-container input{padding:5px 50px;border-radius:8px;border:1px solid #ccc; margin-left: -100px; margin-right: 100px; margin-bottom: -50px;}
+/* ===== TABLE DESIGN ===== */
+table {
+  width: 80%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 14px;
+  overflow: visible;
+  background: #fff;
+  margin-left: 100px;
+}
+
+thead th:first-child {
+  border-top-left-radius: 14px;
+}
+thead th:last-child {
+  border-top-right-radius: 14px;
+}
+
+tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 14px;
+}
+tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 14px;
+}
+
+th {
+  background: #273ea5;
+  color: #fff;
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+/* ============================= */
+/* TABLE SCROLL CONTAINER */
+/* ============================= */
+
+.table-wrapper {
+  width: 80%;
+  margin-left: 100px;
+  max-height: calc(100vh - 260px); /* header + controls safe */
+  overflow-y: auto;
+  border-radius: 14px;
+}
+
+/* Keep table width inside wrapper */
+.table-wrapper table {
+  width: 100%;
+  margin: 0;
+}
+
+/* Optional: sticky table header */
+.table-wrapper thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+
+
+/* ===== ACTION DROPDOWN (FIX) ===== */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-btn {
+  background-color: #fdb827;
+  border: none;
+  padding: 6px 12px;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  top: 110%;        /* pushes it BELOW the button */
+  position: absolute;
+  right: 0;
+  background: #ffffff;
+  min-width: 160px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.dropdown-content div {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dropdown-content div:hover {
+  background-color: #f2f2f2;
+}
+
+/* 🔑 THIS IS THE MISSING PART */
+.dropdown.show .dropdown-content {
+  display: block;
+}
+
+/* ===== MODAL FIX ===== */
+/* ===== MODAL OVERLAY ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal.show {
+  display: flex;
+}
+
+/* ===== MODAL CARD ===== */
+.modal-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px 32px;
+  width: 480px;
+  max-width: 92%;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+  animation: modalPop 0.25s ease;
+}
+
+/* subtle pop animation */
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ===== MODAL TITLE ===== */
+.modal-card h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #020120;
+}
+
+/* ===== MODAL CONTENT ===== */
+.modal-card p {
+  margin: 6px 0;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.modal-card p b {
+  display: inline-block;
+  min-width: 90px;
+  color: #020120;
+}
+
+/* ===== TEXTAREA ===== */
+.modal-card textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+}
+
+.modal-card textarea:focus {
+  border-color: #273ea5;
+  box-shadow: 0 0 0 2px rgba(39,62,165,0.15);
+}
+
+/* ===== FILE INPUT ===== */
+.modal-card input[type="file"] {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.modal-actions button {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Cancel */
+.modal-actions button:first-child {
+  background: #e5e7eb;
+  color: #020120;
+}
+
+.modal-actions button:first-child:hover {
+  background: #d1d5db;
+}
+
+/* Primary (Save / Resolve / Close) */
+.modal-actions button:last-child,
+.modal-card > button {
+  background: #fdb827;
+  color: #000;
+}
+
+.modal-actions button:last-child:hover,
+.modal-card > button:hover {
+  background: #f59e0b;
+}
+
+/* Close button in VIEW modal */
+.modal-card > button {
+  margin-top: 22px;
+  float: right;
+}
+/* ===== VIEW MODAL (VIOLATION STYLE) ===== */
+
+.modal-view {
+  width: 560px;
+}
+
+.view-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 22px;
+}
+
+.view-grid .field.full {
+  grid-column: span 2;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #020120;
+}
+
+.primary-btn {
+  padding: 10px 14px;
+  background: #f59e0b ;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.primary-btn:hover {
+  opacity: 0.9;
+}
+/* ============================= */
+/* NOTIFY STUDENT MODAL POLISH */
+/* ============================= */
+
+#notifyModal .modal-card {
+  width: 540px;
+  padding: 26px 30px;
+}
+
+/* Title */
+#notifyModal h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #020120;
+}
+
+/* Inputs & selects */
+#notifyModal input,
+#notifyModal select,
+#notifyModal textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  background: #ffffff;
+  color: #020120;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Disabled fields (auto-filled) */
+#notifyModal input[disabled] {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Focus state */
+#notifyModal input:focus,
+#notifyModal select:focus,
+#notifyModal textarea:focus {
+  outline: none;
+  border-color: #273ea5;
+  box-shadow: 0 0 0 2px rgba(39, 62, 165, 0.15);
+}
+
+/* Textarea */
+#notifyModal textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* ============================= */
+/* CATEGORY + VIOLATION ROW */
+/* ============================= */
+
+#notifyModal select#nViolationCategory,
+#notifyModal select#nViolation {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(1em + 2px),
+    calc(100% - 13px) calc(1em + 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Wrap category + violation nicely */
+#notifyModal select#nViolationCategory {
+  margin-bottom: 8px;
+}
+
+#notifyModal select#nViolation {
+  margin-bottom: 14px;
+}
+
+/* ============================= */
+/* ACTION BUTTONS */
+/* ============================= */
+
+#notifyModal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+#notifyModal .modal-actions button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+#notifyModal .modal-actions button:first-child {
+  background: #e5e7eb;
+  color: #020120;
+}
+
+#notifyModal .modal-actions button:first-child:hover {
+  background: #d1d5db;
+}
+
+#notifyModal .modal-actions button:last-child {
+  background: #fdb827;
+  color: #000;
+}
+
+#notifyModal .modal-actions button:last-child:hover {
+  background: #f59e0b;
+  transform: translateY(-1px);
+}
+#notify_stud{
+  margin-left: 100px;
+}

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clinic Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="ClinicDashboard.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button class="active" onclick="window.location.href='ClinicDashboard.html'">Home</button>
+    <button onclick="window.location.href='ClinicHealthReport.html'">Health Report</button>
+    <button onclick="window.location.href='ClinicMedicineLogs.html'">Medicine Logs</button>
+    <button onclick="window.location.href='ClinicGenerateReport.html'">Generate Report</button>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="workspace">
+      <div class="content-panel">
+
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-top">
+              <div class="stat-icon"><i class="fas fa-users"></i></div>
+              <div class="stat-number" id="totalVisits">0</div>
+            </div>
+            <div class="stat-label">Logged Visits</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <div class="stat-icon"><i class="fas fa-head-side-cough"></i></div>
+              <div class="stat-number" id="commonCase" style="font-size:26px">—</div>
+            </div>
+            <div class="stat-label">Most Common Case</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-top">
+              <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+              <div class="stat-number" id="totalReports">0</div>
+            </div>
+            <div class="stat-label">Reports Submitted</div>
+          </div>
+        </div>
+
+        <!-- Recent visits -->
+        <h3 class="section-title">Recents Visit Table</h3>
+        <div class="recents-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Student Name</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="recentVisitsBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT MODAL (SAME AS ADMINUI1) -->
+  <div id="modalOverlay"
+       style="display:none; position:fixed; inset:0;
+              background-color:rgba(0,0,0,.5);
+              justify-content:center; align-items:center; z-index:999;">
+
+    <div style="background:#fff; padding:30px; border-radius:10px;
+                width:300px; text-align:center;">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+
+      <div style="margin-top:20px;">
+        <button onclick="logoutYes()"
+                style="background-color:#fdb827; border:none;
+                       padding:10px 20px; border-radius:5px;
+                       font-weight:bold; cursor:pointer;">
+          Yes
+        </button>
+
+        <button onclick="closeModal()"
+                style="background-color:#ccc; border:none;
+                       padding:10px 20px; border-radius:5px;
+                       font-weight:bold; cursor:pointer; margin-left:10px;">
+          No
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Font Awesome -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+  <!-- Firebase + Logout Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import {
+      collection,
+      getDocs,
+      query,
+      where,
+      orderBy,
+      limit
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    /* ===============================
+   DASHBOARD DATA LOADERS
+================================ */
+
+// 1️⃣ TOTAL VISITS
+async function loadTotalVisits() {
+  const snap = await getDocs(collection(db, "visit_reports"));
+  document.getElementById("totalVisits").textContent = snap.size;
+}
+
+// 2️⃣ MOST COMMON CASE
+async function loadMostCommonCase() {
+  const snap = await getDocs(collection(db, "visit_reports"));
+  const counts = {};
+
+  snap.forEach(doc => {
+    const reason = doc.data().reason;
+    if (reason) counts[reason] = (counts[reason] || 0) + 1;
+  });
+
+  let max = 0;
+  let common = "—";
+
+  for (const r in counts) {
+    if (counts[r] > max) {
+      max = counts[r];
+      common = r;
+    }
+  }
+
+  document.getElementById("commonCase").textContent = common;
+}
+
+// 3️⃣ TOTAL HEALTH REPORTS
+async function loadHealthReportsCount() {
+  const snap = await getDocs(collection(db, "health_reports"));
+  document.getElementById("totalReports").textContent = snap.size;
+}
+
+// 4️⃣ TODAY'S RECENT VISITS
+async function loadTodayVisits() {
+  const tbody = document.getElementById("recentVisitsBody");
+  tbody.innerHTML = "";
+
+  const today = new Date().toISOString().split("T")[0];
+  const todayReadable = new Date().toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+
+  const q = query(
+    collection(db, "visit_reports"),
+    orderBy("createdAt", "desc"),
+    limit(10)
+  );
+
+  const snap = await getDocs(q);
+
+  snap.forEach(doc => {
+    const d = doc.data();
+    if (d.date !== todayReadable) return;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.date}</td>
+      <td>${d.studentName}</td>
+      <td>${d.reason}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (!tbody.children.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align:center;color:#666">
+          No visits today
+        </td>
+      </tr>
+    `;
+  }
+}
+
+    // ✅ SAME LOGOUT LOGIC AS ADMINUI1
+    async function logoutAndRecord() {
+      const logId = localStorage.getItem("activeLoginLogId");
+
+      if (logId) {
+        try {
+          await updateDoc(doc(db, "login_logs", logId), {
+            logoutTime: new Date().toLocaleString(),
+            status: "Logged Out"
+          });
+        } catch (err) {
+          console.error("Failed to update logoutTime:", err);
+        }
+      }
+
+      localStorage.removeItem("activeLoginLogId");
+      await signOut(auth);
+      window.location.href = "Login.html";
+    }
+
+    window.logoutYes = logoutAndRecord;
+
+    loadTotalVisits();
+    loadMostCommonCase();
+    loadHealthReportsCount();
+    loadTodayVisits();
+  </script>
+
+
+  <!-- UI helpers -->
+  <script>
+    function toggleLogout() {
+      const btn = document.getElementById("logoutBtn");
+      btn.style.display = (btn.style.display === "block") ? "none" : "block";
+    }
+
+    function openModal() {
+      document.getElementById("modalOverlay").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    document.addEventListener("click", (e) => {
+      const uc = document.querySelector(".user-container");
+      const btn = document.getElementById("logoutBtn");
+      if (!uc.contains(e.target)) btn.style.display = "none";
+    });
+  </script>
+
+</body>
+</html>

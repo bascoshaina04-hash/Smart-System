@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminReport3.css">
+</head>
+<body>
+    <div class="sidebar">
+  <div class="logo">
+    <img src="icons/FInalLogo.png" alt="Logo"/>
+    <h2>Smart</h2>
+  </div>
+  <button onclick="window.location.href='AdminUI1.html'">Home</button>
+  <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+  <button onclick="window.location.href='AdminVio.html'">Violations</button>
+  <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+  <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+  <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+  <button class="active" onclick="window.location.href='AdminReport1.html'">Reports</button>
+</div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="user-container">
+      <div class="user-icon-container" onclick="toggleLogout()">
+        <img src="icons/user-icon.png" alt="User Icon" />
+      </div>
+      <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <h3>Download student violation data for documentation or analysis</h3>
+
+    <div class="group">
+    <div class="filter-group">
+      <button onclick="location.href='AdminReport1.html'" class="viorep">Violation Reports</button>
+      <button onclick="location.href='AdminReport2.html'" class="str">Student Record Reports</button>
+      <button onclick="location.href='AdminReport3.html'" class="viotrend active-btn">Violation Trends</button>
+    </div>
+    </div>
+
+   <div class="top-controls">
+  <div class="filter-container">
+    <select id="yearLevel">
+      <option value="">All Years</option>
+      <option value="1st Year">1st Year</option>
+      <option value="2nd Year">2nd Year</option>
+      <option value="3rd Year">3rd Year</option>
+      <option value="4th Year">4th Year</option>
+    </select>
+
+    <select id="violationType">
+      <option value="">All Violations</option>
+    </select>
+  </div>
+
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search violation...">
+  </div>
+</div>
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr>
+      <th>Violation Type</th>
+      <th>Counts</th>
+      <th>Year Level</th>
+    </tr>
+  </thead>
+  <tbody id="trendBody"></tbody>
+</table>
+</div>
+
+
+    <script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* ---------------- FIREBASE INIT ---------------- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  /* ---------------- DOM ---------------- */
+  const tbody = document.getElementById("trendBody");
+  const yearSelect = document.getElementById("yearLevel");
+  const violationSelect = document.getElementById("violationType");
+  const searchInput = document.getElementById("searchInput");
+
+  /* ---------------- STATE ---------------- */
+  let allTrends = [];
+  let filteredTrends = [];
+
+  /* ---------------- RENDER ---------------- */
+  function renderTable(rows) {
+  tbody.innerHTML = "";
+
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.violationType}</td>
+      <td>${r.count}</td>
+      <td>${r.yearLevel}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+
+  /* ---------------- FILTER ---------------- */
+  function applyFilters() {
+    const year = yearSelect.value;
+    const vio = violationSelect.value;
+    const q = searchInput.value.toLowerCase();
+
+    filteredTrends = allTrends.filter(r => {
+      return (
+        (!year || r.yearLevel === year) &&
+        (!vio || r.violationType === vio) &&
+        r.violationType.toLowerCase().includes(q)
+      );
+    });
+
+    renderTable(filteredTrends);
+  }
+
+  /* ---------------- LOAD DATA ---------------- */
+  async function loadData() {
+
+  /* 1️⃣ BUILD studentID → yearLevel MAP */
+  const studentsSnap = await getDocs(collection(db, "students"));
+  const studentYearMap = {};
+
+  studentsSnap.forEach(doc => {
+    const s = doc.data();
+    if (s.studentID) {
+      studentYearMap[s.studentID] = s.yearLevel || "Unknown";
+    }
+  });
+
+  /* 2️⃣ FETCH ALL VIOLATIONS */
+  const vioSnap = await getDocs(collection(db, "violations"));
+  const violations = vioSnap.docs.map(d => d.data());
+
+  console.log("TOTAL violations fetched:", violations.length);
+
+  /* 3️⃣ AGGREGATE PER VIOLATION TYPE (DO NOT SKIP ANY) */
+  const map = {};
+
+  violations.forEach(v => {
+    const violationType = v.violation || v.type || "Unknown Violation";
+    const yearLevel = studentYearMap[v.studentID] || "Unknown";
+
+    if (!map[violationType]) {
+      map[violationType] = {
+        total: 0,
+        yearCounts: {}
+      };
+    }
+
+    // ✅ count every violation document
+    map[violationType].total++;
+
+    if (!map[violationType].yearCounts[yearLevel]) {
+      map[violationType].yearCounts[yearLevel] = 0;
+    }
+
+    map[violationType].yearCounts[yearLevel]++;
+  });
+
+  /* 4️⃣ BUILD TABLE DATA */
+  allTrends = Object.entries(map).map(([violationType, data]) => {
+    let topYear = "Unknown";
+    let max = 0;
+
+    Object.entries(data.yearCounts).forEach(([year, count]) => {
+      if (count > max) {
+        max = count;
+        topYear = year;
+      }
+    });
+
+    return {
+      violationType,
+      count: data.total,      // ✅ TOTAL violations
+      yearLevel: topYear      // ✅ most frequent year
+    };
+  });
+
+  /* 5️⃣ POPULATE FILTER */
+  violationSelect.innerHTML = `<option value="">All Violations</option>`;
+  allTrends.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.violationType;
+    opt.textContent = v.violationType;
+    violationSelect.appendChild(opt);
+  });
+
+  filteredTrends = allTrends;
+  renderTable(allTrends);
+}
+
+
+
+
+  /* ---------------- EVENTS ---------------- */
+  yearSelect.addEventListener("change", applyFilters);
+  violationSelect.addEventListener("change", applyFilters);
+  searchInput.addEventListener("input", applyFilters);
+
+  /* ---------------- AUTH ---------------- */
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      alert("You are not logged in.");
+      return;
+    }
+    loadData();
+  });
+
+});
+</script>
+
+
+
+</body>
+</html>

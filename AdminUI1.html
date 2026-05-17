@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminUI1.css">
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">
+    <img src="icons/FInalLogo.png" alt="Logo"/>
+    <h2>Smart</h2>
+  </div>
+  <button class="active" onclick="window.location.href='AdminUI1.html'">Home</button>
+  <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+  <button onclick="window.location.href='AdminVio.html'">Violations</button>
+  <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+  <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+  <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+  <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+</div>
+
+<div class="main-content">
+  <div class="header">
+    <div class="user-container">
+      <div class="user-icon-container" onclick="toggleLogout()">
+        <img src="icons/user-icon.png" alt="User Icon" />
+      </div>
+      <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+    </div>
+  </div>
+
+  <div class="dashboard-layout">
+
+  <!-- LEFT SIDE -->
+  <div class="dashboard-left">
+
+    <!-- Status Cards -->
+    <div class="status-cards">
+      <div class="card">
+        <div class="bord"><img src="icons/quote-request.png"></div>
+        <p id="pending-requests">0<br><span>Pending<br>Requests</span></p>
+      </div>
+
+      <div class="card">
+        <div class="bord"><img src="icons/certificate.png"></div>
+        <p id="pending-certs">0<br><span>Pending<br>Incidents</span></p>
+      </div>
+
+      <div class="card">
+        <div class="bord"><img src="icons/warning (2).png"></div>
+        <p id="violations-today">0<br><span>Violations<br>Today</span></p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="active" onclick="window.location.href='AdminUI1.html'">Recent Violations</button>
+      <button onclick="window.location.href='AdminUI2.html'">Upcoming Appointments</button>
+      <button onclick="window.location.href='AdminUI3.html'">Announcements</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-container">
+      <input id="search-input" type="text" placeholder="🔍 Search...">
+    </div>
+
+    <!-- Table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Course</th>
+          <th>Violation</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="violations-body"></tbody>
+    </table>
+
+  </div>
+
+  <!-- RIGHT SIDE GRAPH -->
+  <div class="dashboard-right">
+
+  <div class="chart-container">
+    <canvas id="departmentChart"></canvas>
+  </div>
+
+  <!-- SPECIAL PASS CARD -->
+  <div class="card1 special-pass-card" style="width: 370px; height: 140px;" onclick="openSpecialPassModal()">
+
+  <div class="bord1">
+    <img src="icons/qr-code.png">
+  </div>
+
+  <p id="special-pass-count" style="margin-left: -0px; margin-bottom: -8px;">0 Pending Special Pass</p>
+
+</div>
+</div>
+
+<!-- Logout modal (unchanged) -->
+<div id="modalOverlay" style="display:none; position:fixed; inset:0; background-color:rgba(0,0,0,.5); justify-content:center; align-items:center; z-index:999;">
+  <div style="background:#fff; padding:30px; border-radius:10px; width:300px; text-align:center;">
+    <h3>Confirm Logout</h3>
+    <p>Are you sure you want to logout?</p>
+    <div style="margin-top:20px;">
+      <button onclick="logoutYes()" style="background-color:#fdb827; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">Yes</button>
+      <button onclick="closeModal()" style="background-color:#ccc; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-left:10px;">No</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary modal -->
+<div id="summaryModal">
+  <div id="summaryCard">
+    <h3 id="summaryTitle">Summary</h3>
+    <ul id="summaryList"></ul>
+    <div class="summary-actions">
+      <button class="btn btn-secondary" id="summaryClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPECIAL PASS MODAL -->
+<div id="specialPassModal" class="modal-overlay">
+
+  <div class="modal-card">
+
+    <h3>Student Special Pass</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Student ID</th>
+          <th>Course</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Validity</th>
+        </tr>
+      </thead>
+
+      <tbody id="specialPassTable"></tbody>
+
+    </table>
+  </div>
+</div>
+
+<!-- VALIDITY DATE MODAL -->
+
+<div id="dateModal" class="modal-overlay">
+
+  <div class="modal-card" style="width:400px">
+
+    <h3>Set Special Pass Validity</h3>
+
+    <label>Start Date</label>
+    <input type="date" id="startDate">
+
+    <br><br>
+
+    <label>End Date</label>
+    <input type="date" id="endDate">
+
+    <br><br>
+
+    <button onclick="saveValidity()" class="save-btn">Save</button>
+
+  </div>
+
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- ================== Firebase + Cards + Table + Modal ================== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+  import {
+    getFirestore, collection, query, orderBy, limit, onSnapshot,
+    where, getDocs, Timestamp, doc, getDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  async function logoutAndRecord(auth, db) {
+  const logId = localStorage.getItem("activeLoginLogId");
+
+  if (logId) {
+    try {
+      await updateDoc(doc(db, "login_logs", logId), {
+        logoutTime: new Date().toLocaleString(),
+        status: "Logged Out"
+      });
+    } catch (err) {
+      console.error("Failed to update logoutTime:", err);
+    }
+  } else {
+    console.warn("No activeLoginLogId found.");
+  }
+
+  localStorage.removeItem("activeLoginLogId");
+  await signOut(auth);
+  window.location.href = "Login.html";
+}
+  window.logoutYes = async () => {
+  await logoutAndRecord(auth, db);
+};
+
+
+
+  const $ = (id) => document.getElementById(id);
+  function fmtDate(ts){
+    const d = ts instanceof Timestamp ? ts.toDate() : new Date(ts);
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+  const addDays    = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const fmtTime = (date)=> {
+    const h = date.getHours(), m = date.getMinutes();
+    const ampm = h>=12 ? "PM" : "AM"; const hh = ((h+11)%12)+1;
+    return `${hh}:${String(m).padStart(2,'0')} ${ampm}`;
+  };
+
+  function normalizeStatus(s){
+    const v = String(s||"").toLowerCase();
+    if (v === "open") return "Pending";
+    if (v === "approved") return "Resolved";
+    return v ? v.charAt(0).toUpperCase()+v.slice(1) : "Pending";
+  }
+
+  // caches for modal summaries
+  let cacheViosToday = [];
+  let cachePendingOSA = [];
+
+  onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    // user really not logged in
+    window.location.href = "Login.html";
+    return;
+  }
+
+  let profSnap;
+  try {
+    profSnap = await getDoc(doc(db, "users", user.uid));
+  } catch (err) {
+    console.error("Failed to load profile:", err);
+    // 🚫 DO NOT LOGOUT
+    return;
+  }
+
+  if (!profSnap.exists()) {
+    console.warn("User profile missing");
+    // 🚫 DO NOT LOGOUT
+    return;
+  }
+
+  const role = (profSnap.data().role || "").toLowerCase();
+
+  // 🚫 DO NOT signOut — just redirect
+  if (!["admin", "osa"].includes(role)) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  // ✅ user stays logged in
+  initDashboard();
+  setupViolationsToday();
+  setupPendingRequests();
+  setupPendingCerts();
+  hookSummaryButtons();
+  setupDepartmentGraph();
+  setupSpecialPassCard();
+});
+
+  async function setupDepartmentGraph(){
+
+  const ctx = document.getElementById("departmentChart").getContext("2d");
+
+  const vioSnap = await getDocs(collection(db,"violations"));
+  const studentSnap = await getDocs(collection(db,"students"));
+
+  // Map studentID -> department/course
+  const studentDept = {};
+
+  studentSnap.forEach(doc=>{
+    const s = doc.data();
+    studentDept[s.studentID] = s.course || s.department || "Unknown";
+  });
+
+  const counts = {};
+
+  vioSnap.forEach(doc=>{
+
+    const v = doc.data();
+    const dept = studentDept[v.studentID] || "Unknown";
+
+    if(!counts[dept]) counts[dept] = 0;
+
+    counts[dept]++;
+
+  });
+
+  const labels = Object.keys(counts);
+  const values = Object.values(counts);
+
+  if(window.deptChart){
+    window.deptChart.destroy();
+  }
+
+  window.deptChart = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:labels,
+      datasets:[{
+        label:"Number of Violations",
+        data:values,
+        backgroundColor:"#4e73df"
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        title:{
+          display:true,
+          text:"Violation Records per Department"
+        }
+      }
+    }
+  });
+
+}
+
+function setupSpecialPassCard(){
+
+const q = query(
+collection(db,"specialPassRequests"),
+where("status","in",["pending","Pending"])
+);
+
+onSnapshot(q,(snap)=>{
+
+document.getElementById("special-pass-count").innerHTML =
+`${snap.size} Pending Special Pass`;
+
+});
+
+}
+window.openSpecialPassModal = async function(){
+
+const modal = document.getElementById("specialPassModal");
+const body = document.getElementById("specialPassTable");
+
+modal.style.display = "flex";
+
+const snap = await getDocs(collection(db,"specialPassRequests"));
+
+body.innerHTML="";
+
+snap.forEach(docSnap=>{
+
+const d = docSnap.data();
+
+const tr = document.createElement("tr");
+
+tr.innerHTML = `
+
+<td>${d.studentName}</td>
+<td>${d.studentId}</td>
+<td>${d.course}</td>
+<td>${d.reasonType}</td>
+<td>${d.status}</td>
+
+<td>
+${d.startDate && d.expirationDate
+? `<button onclick="viewValidity('${docSnap.id}')" class="expiry-btn">View</button>`
+: `<button onclick="openDateModal('${docSnap.id}')" class="expiry-btn">Set Validity</button>`
+}
+</td>
+
+`;
+
+body.appendChild(tr);
+
+});
+
+}
+
+window.addEventListener("click", function(event){
+
+const modal = document.getElementById("specialPassModal");
+
+if(event.target === modal){
+modal.style.display = "none";
+}
+
+});
+let selectedPassId = null;
+
+window.openDateModal = function(docId){
+
+selectedPassId = docId;
+
+document.getElementById("dateModal").style.display = "flex";
+
+}
+
+window.saveValidity = async function(){
+
+const start = document.getElementById("startDate").value;
+const end = document.getElementById("endDate").value;
+
+if(!start || !end){
+alert("Please select start and end date.");
+return;
+}
+
+await updateDoc(doc(db,"specialPassRequests",selectedPassId),{
+startDate: new Date(start),
+expirationDate: new Date(end),
+status: "approved"
+});
+
+alert("Validity saved");
+
+document.getElementById("dateModal").style.display="none";
+
+/* refresh table */
+openSpecialPassModal();
+
+}
+window.viewValidity = async function(docId){
+
+const snap = await getDoc(doc(db,"specialPassRequests",docId));
+
+const data = snap.data();
+
+const start = new Date(data.startDate.seconds * 1000).toLocaleDateString();
+const end = new Date(data.expirationDate.seconds * 1000).toLocaleDateString();
+
+alert(`Special Pass Validity
+
+Start Date: ${start}
+End Date: ${end}`);
+
+}
+window.addEventListener("click", function(event){
+
+const modal = document.getElementById("dateModal");
+
+if(event.target === modal){
+modal.style.display = "none";
+}
+
+});
+  // ---- TABLE: 4 most recent violations ----
+  function initDashboard(){
+    const body = $("violations-body");
+    const searchEl = $("search-input");
+    const qV = query(collection(db,"violations"), orderBy("createdAt","desc"), limit(4));
+    let cache = [];
+    onSnapshot(qV, (snap)=>{ cache = snap.docs.map(d=>({ id:d.id, ...d.data() })); render(); });
+    searchEl.addEventListener("input", render);
+    function render(){
+      const s = (searchEl.value||"").toLowerCase();
+      const rows = cache.filter(r=>{
+        const hay = `${r.studentName||""} ${r.violation||""} ${normalizeStatus(r.status)||""}`.toLowerCase();
+        return s ? hay.includes(s) : true;
+      });
+      body.innerHTML = "";
+      if (!rows.length){
+        body.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#666;padding:12px;">No recent violations.</td></tr>`;
+        return;
+      }
+      rows.forEach(rec=>{
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${rec.studentName || "(Unknown)"}</td>
+          <td>${rec.department || rec.course || "Unknown"}</td>
+          <td>${rec.violation || "(—)"}</td>
+          <td>${rec.createdAt ? fmtDate(rec.createdAt) : "(no date)"}</td>
+          <td>${normalizeStatus(rec.status)}</td>
+        `;
+
+        body.appendChild(tr);
+      });
+    }
+  }
+
+  // ---- CARD: Violations Today (+ cache for modal) ----
+  function setupViolationsToday(){
+    const today = startOfDay(new Date());
+    const tomorrow = addDays(today,1);
+    const qToday = query(
+      collection(db,"violations"),
+      where("createdAt", ">=", Timestamp.fromDate(today)),
+      where("createdAt", "<",  Timestamp.fromDate(tomorrow))
+    );
+    onSnapshot(qToday, (snap)=>{
+      $("violations-today").innerHTML = `${snap.size}<br><span>Violations<br>Today</span>`;
+      cacheViosToday = snap.docs.map(d=>({ id:d.id, ...d.data() }))
+        .sort((a,b)=>{
+          const da = a.createdAt?.toDate?.() || new Date(0);
+          const dbt= b.createdAt?.toDate?.() || new Date(0);
+          return dbt - da;
+        });
+    });
+  }
+
+  // ---- CARD: Pending Requests (Good Moral Requests) (+ cache for modal)
+function setupPendingRequests(){
+  const qReq = query(
+    collection(db, "goodMoralRequest"),
+    where("status", "in", ["pending","Pending"]),
+    where("office", "in", ["osa","OSA","Osa"])
+  );
+
+  onSnapshot(qReq, (snap) => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Update the card count
+    $("pending-requests").innerHTML = `${all.length}<br><span>Pending<br>Requests</span>`;
+
+    // Keep a small cache for the “View” summary modal
+    cachePendingOSA = all
+      .map(a => {
+        // Pick a sensible date for ordering/display
+        let dt;
+        if (typeof a.preferredDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.preferredDate)) {
+          const [y, m, d] = a.preferredDate.split("-").map(Number);
+          dt = new Date(y, m - 1, d);
+        } else if (a.createdAt?.toDate) {
+          dt = a.createdAt.toDate();
+        } else {
+          dt = new Date();
+        }
+        return { ...a, _dt: dt };
+      })
+      .sort((a, b) => a._dt - b._dt);
+  }, () => {
+    $("pending-requests").innerHTML = `0<br><span>Pending<br>Requests</span>`;
+    cachePendingOSA = [];
+  });
+}
+
+
+  // ---- CARD: Pending Incidents (placeholder = 0) ----
+  function setupPendingCerts(){
+  const qIncidents = query(
+    collection(db, "incidentReports"),
+    where("status", "in", ["pending", "Pending"])
+  );
+
+  onSnapshot(qIncidents, (snap) => {
+    $("pending-certs").innerHTML =
+      `${snap.size}<br><span>Pending<br>Incidents</span>`;
+  }, () => {
+    $("pending-certs").innerHTML =
+      `0<br><span>Pending<br>Incidents</span>`;
+  });
+}
+
+
+  function hookSummaryButtons(){
+  const btnPending    = $("viewPendingBtn");
+  const btnCerts      = $("viewCertsBtn");
+  const btnViolations = $("viewViolationsBtn");
+  const btnClose      = $("summaryClose");
+  const modal         = $("summaryModal");
+
+  if (btnPending)    btnPending.addEventListener("click", ()=> openSummary("pending"));
+  if (btnCerts)      btnCerts.addEventListener("click",   ()=> openSummary("incidents"));
+  if (btnViolations) btnViolations.addEventListener("click", ()=> openSummary("violationsToday"));
+
+  if (btnClose) btnClose.addEventListener("click", closeSummary);
+
+  if (modal) {
+    modal.addEventListener("click",(e)=>{
+      if(e.target.id==="summaryModal") closeSummary();
+    });
+  }
+}
+
+
+  async function openSummary(kind){
+    const modal = $("summaryModal");
+    const title = $("summaryTitle");
+    const list  = $("summaryList");
+    list.innerHTML = "";
+
+    if (kind === "pending"){
+  title.textContent = "Pending Good Moral Requests — quick view"; // <- changed
+  const items = cachePendingOSA.slice(0,5);
+      if (!items.length){ list.innerHTML = `<li>No pending OSA appointments.</li>`; modal.style.display="flex"; return; }
+      items.forEach(a=>{
+        const when = a._dt || new Date();
+        const li = document.createElement("li");
+        li.textContent = `${a.studentName||"(Unknown)"} • ${fmtDate(when)} ${fmtTime(when)} • ${a.purpose||"—"}`;
+        list.appendChild(li);
+      });
+    } else if (kind === "incidents"){
+      title.textContent = "Pending Incidents — quick view";
+      list.innerHTML = `<li>No pending incidents yet.</li>`;
+    } else if (kind === "violationsToday"){
+      title.textContent = "Violations Today — quick view";
+      const items = cacheViosToday.slice(0,5);
+      if (!items.length){ list.innerHTML = `<li>No violations today.</li>`; modal.style.display="flex"; return; }
+      items.forEach(v=>{
+        const when = v.createdAt?.toDate?.() || new Date();
+        const li = document.createElement("li");
+        li.textContent = `${v.studentName||"(Unknown)"} • ${v.violation||"—"} • ${fmtTime(when)}`;
+        list.appendChild(li);
+      });
+    }
+    modal.style.display = "flex";
+  }
+  function closeSummary(){ $("summaryModal").style.display="none"; }
+
+  // header helpers
+  window.toggleLogout = function(){ const b = document.getElementById("logoutBtn"); b.style.display = (b.style.display==="block" ? "none" : "block"); }
+  window.openModal  = function(){ document.getElementById("modalOverlay").style.display="flex"; }
+  window.closeModal = function(){ document.getElementById("modalOverlay").style.display="none"; }
+  window.logoutNow  = async function(){ await signOut(auth); window.location.href="Login.html"; }
+</script>
+</body>
+</html>

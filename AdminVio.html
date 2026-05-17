@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin • Violations Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminVio.css">
+  <style>
+    /* small helper styles for previews/links */
+    .attachment-preview { max-height: 120px; display:block; margin-bottom:6px; border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    .attachment-link { display:inline-block; margin-right:8px; font-weight:600; color:#0b3b66; text-decoration:none; }
+    .attachment-link:hover { text-decoration:underline; }
+
+    /* Example offense-chip classes (you already likely have these in AdminVio.css) */
+    .offense-chip { display:inline-block; padding:6px 10px; border-radius:8px; color:#fff; font-weight:700; min-width:44px; text-align:center; }
+    .offense-1 { background:#2b9bf4; } /* 1st - blue */
+    .offense-2 { background:#f59e0b; } /* 2nd - amber */
+    .offense-3 { background:#e11d48; } /* 3rd and above - red */
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='AdminUI1.html'">Home</button>
+    <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+    <button class="active" onclick="window.location.href='AdminVio.html'">Violations</button>
+    <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+    <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+    <button onclick="window.location.href='AdminIncident.html'">Incidents</button>
+    <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h2>Violations Management</h2>
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openModal()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Controls: single Violations button -->
+    <div class="top-controls">
+      <button class="add-btn" id="openViolations">Violations</button>
+
+      <div class="filter-container">
+        <select id="status-filter">
+          <option value="All">All</option>
+          <option value="Pending">Pending</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Escalated">Escalated</option>
+        </select>
+      </div>
+      <div class="search-container">
+        <input type="text" id="search" placeholder="Search by name or violation...">
+      </div>
+    </div>
+
+    <!-- Violation LOGS table (SCROLLABLE) -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Student Name</th>
+            <th>Offense</th>
+            <th>Violation</th>
+            <th>Submitted by</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="vio-body">
+          <!-- Live rows from Firestore -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Manage Violation Types (opened by "Violations" button) ===== -->
+  <div id="violationsModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="violationsTitle">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <h2 id="violationsTitle" style="margin:0; font-size:1.4rem;">Violation Types</h2>
+      </div>
+
+      <div style="margin-top:16px; display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; ">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button id="openAddModal" class="small-btn btn" style="background-color: #fdb827;">+ Add new violation</button>
+          <select id="typesFilter" class="small-btn btn" aria-label="Filter violation category" style="box-shadow: 0 1px 2px rgba(0,0,0,0.10); ">
+            <option value="All" >All</option>
+            <option value="Academic">Academic</option>
+            <option value="Grave">Grave</option>
+            <option value="Less Grave">Less Grave</option>
+            <option value="Light">Light</option>
+          </select>
+        </div>
+        <div style="text-align:right;">
+          <button id="closeViolations" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <table class="types-table" aria-describedby="types-help" style="width:100%;">
+          <thead>
+            <tr>
+              <th style="min-width:360px;">Violation</th>
+              <th style="min-width:160px;">Category</th>
+            </tr>
+          </thead>
+          <tbody id="typesBody">
+            <!-- Will be filled from Firestore -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Add new Violation Type (separate) ===== -->
+  <div id="addTypeModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addTypeTitle">
+      <h3 id="addTypeTitle" style="margin:0 0 8px 0;">Add Violation Type</h3>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <input id="add_name" type="text" placeholder="Violation name (ex: Cyberbullying)" />
+        <select id="add_category">
+          <option value="">Select Category</option>
+          <option value="Academic">Academic</option>
+          <option value="Grave">Grave</option>
+          <option value="Less Grave">Less Grave</option>
+          <option value="Light">Light</option>
+        </select>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+          <button id="addCancel" class="btn btn-secondary">Cancel</button>
+          <button id="addSave" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: RECORDS (all violations for the clicked student) ===== -->
+  <div id="recordsModal" class="modal" aria-hidden="true">
+    <!-- INCREASED MAX WIDTH FOR BETTER CLARITY -->
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="recordsTitle" style="max-width:1100px;">
+      <h3 id="recordsTitle">Student Violation Records</h3>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <div style="display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+          <div>
+            <label style="font-weight:700; font-size:0.95rem;">Student</label>
+            <div id="rStudentName" class="readonly-input" style="font-weight:700;"></div>
+          </div>
+          <div style="text-align:right;">
+            <label style="font-weight:700; font-size:0.95rem;">Total Offenses</label>
+            <div id="rOffenseCount" class="readonly-input" style="display:inline-block; min-width:72px; text-align:center;"></div>
+          </div>
+        </div>
+
+        <div>
+          <table class="records-table" id="rRecordsTable" aria-describedby="rRecordsHelp">
+            <thead>
+              <tr>
+                <th style="min-width:220px">Violation</th>
+                <th style="min-width:110px">Date</th>
+                <th style="min-width:110px">Status</th>
+                <th style="min-width:160px">Sanction / Notes</th>
+                <th style="min-width:160px">Attachment</th>
+              </tr>
+            </thead>
+            <tbody id="rRecordsBody"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+          <button id="closeRecords" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: VIEW SINGLE Violation (opened from Action -> View) ===== -->
+  <div id="singleViewModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="singleViewTitle" style="max-width:720px;">
+      <h3 id="singleViewTitle">View Violation</h3>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <div class="single-view-grid" style="display:flex;gap:18px;">
+          <div class="col" style="flex:1;">
+            <label>Student Name</label>
+            <div id="svStudentName" class="readonly-input"></div>
+
+            <label>Violation</label>
+            <div id="svViolation" class="readonly-input"></div>
+
+            <label>Date</label>
+            <div id="svDate" class="readonly-input"></div>
+          </div>
+
+          <div class="col" style="flex:1;">
+            <label>Status</label>
+            <div id="svStatus" class="readonly-input"></div>
+
+            <label>Notes</label>
+            <div id="svNotes" class="readonly-text">(none)</div>
+
+            <label>Sanction</label>
+            <div id="svSanction" class="readonly-text">(none)</div>
+          </div>
+        </div>
+
+        <div id="svAttachmentContainer" style="display:none;">
+          <label>Attachment / Evidence</label>
+          <div id="svAttachment"></div>
+        </div>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+          <button id="closeSingleView" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: SANCTION (add sanction note) ===== -->
+  <div id="sanctionModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="sanctionTitle" style="max-width:620px;">
+      <h3 id="sanctionTitle">Apply Sanction</h3>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <label>Sanction details / Notes</label>
+        <textarea id="sanctionNotes" placeholder="Describe the sanction or penalty..." style="min-height:120px; padding:8px; border-radius:6px; border:1px solid #ddd;"></textarea>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+          <button id="closeSanction" class="btn btn-secondary">Cancel</button>
+          <button id="saveSanction" class="btn btn-primary">Save Sanction</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: RESOLVE CASE (attachment + notes) ===== -->
+  <div id="resolveModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resolveTitle" style="max-width:720px;">
+      <h3 id="resolveTitle">Resolve Case</h3>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+        <label>Resolution Notes</label>
+        <textarea id="resolveNotes" placeholder="Write resolution summary..." style="min-height:120px; padding:8px; border-radius:6px; border:1px solid #ddd;"></textarea>
+
+        <label>Attachment (optional)</label>
+        <input id="resolveAttachment" type="file" accept="image/*,application/pdf,.doc,.docx" />
+
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+          <button id="closeResolve" class="btn btn-secondary">Cancel</button>
+          <button id="saveResolve" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Hidden: Edit modal (kept for internal API but not accessible via dropdown) ===== -->
+  <div id="editModal" class="modal" style="display:none;">
+    <div class="modal-card">
+      <h3 id="modalTitle">Edit Violation</h3>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="mStudentName">Student Name</label>
+          <input id="mStudentName" type="text" required>
+        </div>
+        <div class="form-col">
+          <label for="mViolation">Violation</label>
+          <input id="mViolation" type="text" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="mDateTime">Date & Time</label>
+          <input id="mDateTime" type="datetime-local" required>
+        </div>
+        <div class="form-col">
+          <label for="mStatus">Status</label>
+          <select id="mStatus">
+            <option>Pending</option>
+            <option>Resolved</option>
+            <option>Escalated</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-col">
+        <label for="mNotes">Notes (optional)</label>
+        <textarea id="mNotes" placeholder="Additional details..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="closeEdit">Cancel</button>
+        <button class="btn btn-danger" id="deleteBtn" style="display:none;">Delete</button>
+        <button class="btn btn-primary" id="saveEdit">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Confirm -->
+  <div id="modalOverlay" class="modal">
+    <div class="modal-card" style="max-width:360px;">
+      <h3>Confirm Logout</h3>
+      <p>Are you sure you want to logout?</p>
+      <div class="modal-actions">
+        <button onclick="logoutNow()" class="btn btn-primary">Yes</button>
+        <button onclick="closeModal()" class="btn btn-secondary">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Firebase + Logic ================= -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, onSnapshot,
+  doc, getDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp,
+  where, getDocs, setDoc
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // ===== Admin Guard =====
+    // ===== ROLE GUARD (OSA ONLY) =====
+async function checkRole() {
+  const user = auth.currentUser;
+
+  if (!user) {
+    window.location.href = "Login.html";
+    return;
+  }
+
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if (!snap.exists()) {
+    await signOut(auth);
+    window.location.href = "Login.html";
+    return;
+  }
+
+  const role = (snap.data().role || "").toLowerCase();
+
+  if (role !== "osa") {
+    alert("Access denied.");
+    await signOut(auth);
+    window.location.href = "Login.html";
+    return;
+  }
+
+  // ✅ User is OSA — load page logic
+  initViolationTypeManager();
+  initViolationReports();
+}
+
+// Wait for auth state, then check role
+onAuthStateChanged(auth, () => {
+  checkRole();
+});
+
+
+    
+
+
+    const $ = (id) => document.getElementById(id);
+
+    function showModal(el){
+      if (!el) return;
+      el.classList.add('show');
+      el.setAttribute('aria-hidden','false');
+      if (el.id === 'addTypeModal') el.style.zIndex = 1100;
+      else if (el.id === 'violationsModal') el.style.zIndex = 1000;
+      else if (el.id === 'sanctionModal') el.style.zIndex = 1150;
+      else if (el.id === 'recordsModal') el.style.zIndex = 1150;
+      else if (el.id === 'singleViewModal') el.style.zIndex = 1150;
+      else if (el.id === 'resolveModal') el.style.zIndex = 1150;
+    }
+    function hideModal(el){
+      if (!el) return;
+      el.classList.remove('show');
+      el.setAttribute('aria-hidden','true');
+      el.style.zIndex = '';
+    }
+
+    function normalizeStatus(s) {
+      const v = String(s || '').toLowerCase();
+      if (v === 'open') return 'Pending';
+      if (v === 'approved') return 'Resolved';
+      return v ? (v.charAt(0).toUpperCase() + v.slice(1)) : 'Pending';
+    }
+    function fmtDateMaybe(ts) {
+      if (!ts) return '(pending…)';
+      const d = ts instanceof Timestamp ? ts.toDate() : new Date(ts);
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    function chip(statusLabel){
+      const s = String(statusLabel||'Pending').toLowerCase();
+      const cls = (s==='resolved') ? 'status-resolved'
+              : (s==='escalated') ? 'status-escalated'
+              : (s==='ongoing') ? 'status-sanctioned'
+              : (s==='sanctioned') ? 'status-sanctioned'
+              : 'status-pending';
+      return `<span class="status-chip ${cls}">${statusLabel}</span>`;
+    }
+
+    /* ------------------------
+       Violation Types Manager (unchanged)
+       ------------------------ */
+    const openViolations = $("openViolations");
+    const violationsModal = $("violationsModal");
+    const closeViolations = $("closeViolations");
+    const typesBody = $("typesBody");
+    const typesFilter = $("typesFilter");
+    const openAddModal = $("openAddModal");
+    const addTypeModal = $("addTypeModal");
+    const addName = $("add_name");
+    const addCategory = $("add_category");
+    const addSave = $("addSave");
+    const addCancel = $("addCancel");
+
+    let typesCache = {};
+    let typesUnsub = null;
+
+    const defaultViolations = [ /* ... same data omitted for brevity ... */ ];
+
+    function initViolationTypeManager(){
+      if (!openViolations) return;
+      openViolations.addEventListener("click", async ()=> {
+        showModal(violationsModal);
+        if (typesFilter) typesFilter.value = "All";
+        subscribeTypes();
+      });
+
+      if (closeViolations) closeViolations.addEventListener("click", ()=> hideModal(violationsModal));
+      if (openAddModal) openAddModal.addEventListener("click", ()=> {
+        if (addName) addName.value = "";
+        if (addCategory) addCategory.value = "";
+        showModal(addTypeModal);
+        setTimeout(()=> addName && addName.focus(), 80);
+      });
+      if (addCancel) addCancel.addEventListener("click", ()=> hideModal(addTypeModal));
+      if (addSave) addSave.addEventListener("click", async ()=> {
+        const name = (addName.value || "").trim();
+        const category = (addCategory.value || "").trim();
+        if (!name) return alert("Violation name is required.");
+        if (!category) return alert("Category is required.");
+        const duplicate = Object.values(typesCache).some(t =>
+          (t.name || "").toLowerCase() === name.toLowerCase()
+          && (t.category || "").toLowerCase() === category.toLowerCase()
+        );
+        if (duplicate) return alert("This violation already exists.");
+        try {
+          addSave.disabled = true; addSave.textContent = "Saving...";
+          await addDoc(collection(db, "violation_list"), { name, category, active: true, createdAt: serverTimestamp() });
+          await fetchTypesOnceSilent();
+          hideModal(addTypeModal); addName.value = ""; addCategory.value = "";
+        } catch (e) {
+          console.error("Failed to add type:", e);
+          alert("Failed to add violation type.");
+        } finally { addSave.disabled = false; addSave.textContent = "Save"; }
+      });
+      if (typesFilter) typesFilter.addEventListener("change", ()=> rebuildTypesUI());
+    }
+
+    function subscribeTypes(){
+      if (typesUnsub) { rebuildTypesUI(); return; }
+      try {
+        const q = query(collection(db,"violation_list"), where("active","==", true), orderBy("name","asc"));
+        typesUnsub = onSnapshot(q, (snap) => {
+          typesCache = {};
+          snap.docs.forEach(d => typesCache[d.id] = { id: d.id, ...d.data() });
+          rebuildTypesUI();
+        }, (err) => { console.error("Error fetching violation_list (onSnapshot):", err); fetchTypesOnceSilent(); });
+      } catch(err){
+        console.warn("subscribeTypes fallback to fetch once", err);
+        fetchTypesOnceSilent();
+      }
+    }
+
+    async function fetchTypesOnceSilent(){
+      try {
+        const q = query(collection(db,"violation_list"), where("active","==", true), orderBy("name","asc"));
+        const snap = await getDocs(q);
+        typesCache = {}; snap.docs.forEach(d => typesCache[d.id] = { id: d.id, ...d.data() });
+        rebuildTypesUI();
+      } catch (err) {
+        console.error("fetchTypesOnce failed:", err);
+        try {
+          const q2 = query(collection(db,"violation_list"), where("active","==", true));
+          const snap2 = await getDocs(q2);
+          typesCache = {}; snap2.docs.forEach(d => typesCache[d.id] = { id: d.id, ...d.data() });
+          rebuildTypesUI();
+        } catch(e2) {
+          console.error("fallback also failed:", e2);
+          if (typesBody) typesBody.innerHTML = "";
+        }
+      }
+    }
+
+    function rebuildTypesUI(){
+      if (!typesBody) return;
+      const vals = Object.values(typesCache).sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+      const toShow = vals.length ? vals : defaultViolations;
+      const selected = (typesFilter && typesFilter.value) ? typesFilter.value : "All";
+      const filtered = (selected === "All") ? toShow : toShow.filter(t => String(t.category || "").toLowerCase() === String(selected).toLowerCase());
+      typesBody.innerHTML = "";
+      filtered.forEach(t => {
+        const tr = document.createElement("tr");
+        const tdName = document.createElement("td"); tdName.textContent = t.name || "(—)";
+        const tdCategory = document.createElement("td"); tdCategory.textContent = t.category || "(—)";
+        tr.append(tdName, tdCategory); typesBody.appendChild(tr);
+      });
+    }
+
+    /* ------------------------
+       Existing Violations list (modified actions + offense count + row click -> records)
+       ------------------------ */
+    const vioBody      = $("vio-body");
+    const statusFilter = $("status-filter");
+    const searchInput  = $("search");
+
+    // Records modal elements
+    const recordsModal = $("recordsModal");
+    const closeRecords = $("closeRecords");
+    const rStudentName = $("rStudentName");
+    const rOffenseCount = $("rOffenseCount");
+    const rRecordsBody = $("rRecordsBody");
+
+    // Single view modal elements
+    const singleViewModal = $("singleViewModal");
+    const closeSingleView = $("closeSingleView");
+    const svStudentName = $("svStudentName");
+    const svViolation = $("svViolation");
+    const svDate = $("svDate");
+    const svStatus = $("svStatus");
+    const svNotes = $("svNotes");
+    const svSanction = $("svSanction");
+    const svAttachmentContainer = $("svAttachmentContainer");
+    const svAttachment = $("svAttachment");
+
+    // sanction & resolve
+    const sanctionModal = $("sanctionModal");
+    const sanctionNotes = $("sanctionNotes");
+    const closeSanction = $("closeSanction");
+    const saveSanction = $("saveSanction");
+
+    const resolveModal = $("resolveModal");
+    const resolveNotes = $("resolveNotes");
+    const resolveAttachment = $("resolveAttachment");
+    const closeResolve = $("closeResolve");
+    const saveResolve = $("saveResolve");
+
+    let vioCache = [];
+    let currentSanctionId = null;
+    let currentResolveId = null;
+
+    // Count offenses by studentName (case-insensitive). Caps at 3 for display/styling.
+    // ===== NEW: normalization helper to make slightly different name spellings match =====
+    function normalizeStudentKey(name){
+      if (!name) return "";
+      // convert to string + lowercase + trim
+      let s = String(name).toLowerCase().trim();
+
+      // remove dots/commas/extra punctuation
+      s = s.replace(/[.,()]/g, " ");
+
+      // remove accents if needed (basic normalization)
+      s = s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+
+      // collapse whitespace
+      s = s.replace(/\s+/g, " ").trim();
+
+      // remove common suffixes
+      s = s.replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "").trim();
+
+      // remove single-letter middle initials (a single token between words)
+      s = s.replace(/\b([a-z])\b(?=\s+[a-z])/g, "").replace(/\s+/g,' ').trim();
+
+      // finally collapse spaces again
+      s = s.replace(/\s+/g, ' ').trim();
+
+      return s;
+    }
+
+    function countOffensesForStudent(studentName){
+      if (!studentName) return 0;
+      const targetKey = normalizeStudentKey(studentName);
+      if (!targetKey) return 0;
+
+      let count = 0;
+      for (const rec of vioCache) {
+        const name = String(rec.studentName || "");
+        const key = normalizeStudentKey(name);
+        if (!key) continue;
+        if (key === targetKey) count++;
+      }
+      return count;
+    }
+
+    function countActiveViolations(studentName){
+      const targetKey = normalizeStudentKey(studentName);
+      if (!targetKey) return 0;
+
+      let count = 0;
+
+      vioCache.forEach(v => {
+        const key = normalizeStudentKey(v.studentName);
+
+        if (key === targetKey) {
+          const status = String(v.status || "").toLowerCase();
+
+          // only count unresolved cases
+          if (status !== "resolved") {
+            count++;
+          }
+        }
+      });
+
+      return count;
+    }
+
+    // Improved ordinal label generator (supports >3)
+    function offenseLabel(n){
+      if (!n || n <= 0) return '0';
+      // basic English ordinals
+      const j = n % 10, k = n % 100;
+      if (j === 1 && k !== 11) return n === 1 ? '1st' : n + 'st';
+      if (j === 2 && k !== 12) return n === 2 ? '2nd' : n + 'nd';
+      if (j === 3 && k !== 13) return n === 3 ? '3rd' : n + 'rd';
+      return n + 'th';
+    }
+
+    // Return 1-based chronological position of `rec` among that student's records
+    // (1 = oldest violation uploaded for that student).
+    function offensePositionForRecord(rec){
+
+        if (!rec || !rec.id) return 0;
+
+        const studentKey = normalizeStudentKey(rec.studentName || "");
+        if (!studentKey) return 0;
+
+        // Only count ACTIVE violations (not resolved)
+        const related = vioCache
+          .filter(r => {
+            const sameStudent = normalizeStudentKey(r.studentName) === studentKey;
+            const status = String(r.status || "").toLowerCase();
+
+            return sameStudent && status !== "resolved";
+          })
+          .map(r => ({
+            id: r.id,
+            createdAt: (r.createdAt && r.createdAt.toDate)
+              ? r.createdAt.toDate().getTime()
+              : 0
+          }));
+
+        if (!related.length) return 0;
+
+        // oldest first
+        related.sort((a,b) => a.createdAt - b.createdAt);
+
+        const idx = related.findIndex(r => r.id === rec.id);
+
+        if (idx === -1) return related.length;
+
+        return idx + 1;
+      }
+
+    function clearRecordsModal(){
+      if (rRecordsBody) rRecordsBody.innerHTML = "";
+      if (rStudentName) rStudentName.textContent = "";
+      if (rOffenseCount) rOffenseCount.textContent = "";
+    }
+
+    function clearSingleView(){
+      if (svStudentName) svStudentName.textContent = "";
+      if (svViolation) svViolation.textContent = "";
+      if (svDate) svDate.textContent = "";
+      if (svStatus) svStatus.textContent = "";
+      if (svNotes) svNotes.textContent = "(none)";
+      if (svSanction) svSanction.textContent = "(none)";
+      if (svAttachment) svAttachment.innerHTML = "";
+      if (svAttachmentContainer) svAttachmentContainer.style.display = "none";
+    }
+
+    // helper: convert evidenceBase64 into usable data URI
+    function evidenceBase64ToDataUrl(base64String, filename){
+      if (!base64String) return null;
+      // If it's already a data URI, return as-is
+      if (base64String.startsWith('data:')) return base64String;
+      // infer mime from filename if possible
+      let mime = 'image/jpeg';
+      if (filename) {
+        const ext = (filename.split('.').pop() || '').toLowerCase();
+        if (ext === 'png') mime = 'image/png';
+        else if (ext === 'gif') mime = 'image/gif';
+        else if (ext === 'webp') mime = 'image/webp';
+        else if (ext === 'pdf') mime = 'application/pdf';
+      }
+      return `data:${mime};base64,${base64String}`;
+    }
+
+    // Open records modal showing all violations for a student (triggered by row click)
+    // ===== UPDATED: uses normalized key so slightly different name variants are grouped =====
+    function openRecordsModalByStudent(rec){
+      const studentName = rec.studentName || "(Unknown)";
+      const targetKey = normalizeStudentKey(studentName);
+
+      // filter all violations for that student (case-insensitive, normalized)
+      const records = vioCache.filter(r => normalizeStudentKey(r.studentName) === targetKey)
+                             .sort((a,b) => {
+                               const ta = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : 0;
+                               const tb = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : 0;
+                               return tb - ta; // newest first
+                             });
+
+      clearRecordsModal();
+      if (rStudentName) rStudentName.textContent = studentName;
+      if (rOffenseCount) rOffenseCount.textContent = String(records.length);
+
+      if (!rRecordsBody) return;
+      if (!records.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.textContent = "No records found for this student.";
+        td.style.fontStyle = "italic";
+        tr.appendChild(td);
+        rRecordsBody.appendChild(tr);
+      } else {
+        records.forEach(r => {
+          const tr = document.createElement("tr");
+          const tdViolation = document.createElement("td"); tdViolation.textContent = r.violation || "(—)";
+          const tdDate = document.createElement("td"); tdDate.textContent = fmtDateMaybe(r.createdAt);
+          const tdStatus = document.createElement("td"); tdStatus.innerHTML = chip(normalizeStatus(r.status));
+          const tdSanction = document.createElement("td");
+          const parts = [];
+          if (r.sanction) parts.push(`Sanction: ${r.sanction}`);
+          if (r.notes) parts.push(`Notes: ${r.notes}`);
+          if (r.resolutionNotes) parts.push(`Resolution: ${r.resolutionNotes}`);
+          tdSanction.innerHTML = parts.length ? parts.join("<br/>") : "(none)";
+
+          const tdAttach = document.createElement("td");
+
+          /* === NEW: show attachment in records when present (same logic as single view) === */
+          const resData = r.resolutionAttachmentData;
+          const resName = r.resolutionAttachmentName;
+          const resUrlField = r.resolutionAttachmentUrl || r.resolutionAttachmentLink || null;
+          const evidenceBase64 = r.evidenceBase64 || null;
+          const evidenceUrl = r.evidenceUrl || r.evidence_link || r.attachmentUrl || r.attachment_link || null;
+          const evidenceName = r.evidenceName || r.evidence_name || r.attachmentName || null;
+
+          if (resData) {
+            if (typeof resData === 'string' && resData.startsWith('data:')) {
+              const img = document.createElement('img'); img.src = resData; img.alt = resName || 'attachment'; img.className = 'attachment-preview';
+              tdAttach.appendChild(img);
+              const a = document.createElement('a'); a.href = resData; a.download = resName || 'attachment'; a.textContent = 'Download'; a.className='attachment-link';
+              tdAttach.appendChild(a);
+            } else if (typeof resData === 'string') {
+              // treat as data URL if it looks like base64 or direct URL
+              const maybe = resData.startsWith('/') || /^[A-Za-z0-9+/=]/.test(resData) ? `data:image/jpeg;base64,${resData}` : resData;
+              const img = document.createElement('img'); img.src = maybe; img.alt = resName || 'attachment'; img.className = 'attachment-preview';
+              tdAttach.appendChild(img);
+              const a = document.createElement('a'); a.href = maybe; a.download = resName || 'attachment'; a.textContent = 'Download'; a.className='attachment-link';
+              tdAttach.appendChild(a);
+            } else {
+              tdAttach.textContent = resName || '(attachment)';
+            }
+          } else if (resUrlField) {
+            const a = document.createElement('a'); a.href = resUrlField; a.target='_blank'; a.rel='noopener'; a.textContent = `Open (${resName || 'attachment'})`; a.className='attachment-link';
+            tdAttach.appendChild(a);
+            const d = document.createElement('a'); d.href = resUrlField; d.download = resName || 'attachment'; d.textContent = ' Download'; d.className='attachment-link';
+            tdAttach.appendChild(d);
+          } else if (evidenceBase64) {
+            // build data url
+            const dataUrl = evidenceBase64ToDataUrl(evidenceBase64, evidenceName);
+            if (dataUrl && dataUrl.startsWith('data:')) {
+              // if it's an image, preview; otherwise provide link
+              if (dataUrl.startsWith('data:image')) {
+                const img = document.createElement('img'); img.src = dataUrl; img.alt = evidenceName || 'evidence'; img.className = 'attachment-preview';
+                tdAttach.appendChild(img);
+                const a = document.createElement('a'); a.href = dataUrl; a.download = evidenceName || 'evidence'; a.textContent = 'Download'; a.className='attachment-link';
+                tdAttach.appendChild(a);
+              } else {
+                const a = document.createElement('a'); a.href = dataUrl; a.target='_blank'; a.rel='noopener'; a.textContent = `Open (${evidenceName || 'file'})`; a.className='attachment-link';
+                tdAttach.appendChild(a);
+                const d = document.createElement('a'); d.href = dataUrl; d.download = evidenceName || 'evidence'; d.textContent = ' Download'; d.className='attachment-link';
+                tdAttach.appendChild(d);
+              }
+            } else {
+              tdAttach.textContent = evidenceName ? `Evidence: ${evidenceName}` : '(attachment)';
+            }
+          } else if (evidenceUrl) {
+            const a = document.createElement('a'); a.href = evidenceUrl; a.target='_blank'; a.rel='noopener'; a.textContent = `Open (${evidenceName || 'file'})`; a.className='attachment-link';
+            tdAttach.appendChild(a);
+            const d = document.createElement('a'); d.href = evidenceUrl; d.download = evidenceName || 'evidence'; d.textContent = ' Download'; d.className='attachment-link';
+            tdAttach.appendChild(d);
+          } else if (evidenceName) {
+            tdAttach.textContent = `Evidence name: ${evidenceName} (no URL available)`;
+          } else {
+            tdAttach.textContent = "(—)";
+          }
+
+          tr.append(tdViolation, tdDate, tdStatus, tdSanction, tdAttach);
+          rRecordsBody.appendChild(tr);
+        });
+      }
+
+      showModal(recordsModal);
+    }
+
+    if (closeRecords) closeRecords.addEventListener("click", ()=> { hideModal(recordsModal); clearRecordsModal(); });
+
+    // Open single view modal for one record (triggered by Action -> View)
+    function openSingleView(rec){
+      clearSingleView();
+
+      if (svStudentName) svStudentName.textContent = rec.studentName || "(Unknown)";
+      if (svViolation) svViolation.textContent = rec.violation || "(—)";
+      if (svDate) svDate.textContent = fmtDateMaybe(rec.createdAt);
+      if (svStatus) svStatus.textContent = normalizeStatus(rec.status);
+      if (svNotes) svNotes.textContent = rec.notes || "(none)";
+      if (svSanction) svSanction.textContent = rec.sanction || "(none)";
+
+      // Attachment / evidence logic:
+      // Priority: resolutionAttachmentData/url (used for resolved) -> evidenceBase64 -> evidenceUrl -> evidenceName
+      const resData = rec.resolutionAttachmentData;
+      const resName = rec.resolutionAttachmentName;
+      const evidenceBase64 = rec.evidenceBase64 || null;
+      const evidenceUrl = rec.evidenceUrl || rec.evidence_link || null;
+      const evidenceName = rec.evidenceName || rec.evidence_name || null;
+      const resUrlField = rec.resolutionAttachmentUrl || rec.resolutionAttachmentLink || null;
+
+      if (resData) {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "block";
+        if (typeof resData === 'string' && resData.startsWith('data:')) {
+          const img = document.createElement('img'); img.src = resData; img.alt = resName || 'attachment'; img.className='attachment-preview';
+          svAttachment.appendChild(img);
+          const a = document.createElement('a'); a.href = resData; a.download = resName || 'attachment'; a.textContent = 'Download'; a.className='attachment-link';
+          svAttachment.appendChild(a);
+        } else if (typeof resData === 'string') {
+          const maybe = resData.startsWith('/') || /^[A-Za-z0-9+/=]/.test(resData) ? `data:image/jpeg;base64,${resData}` : resData;
+          const img = document.createElement('img'); img.src = maybe; img.alt = resName || 'attachment'; img.className='attachment-preview';
+          svAttachment.appendChild(img);
+          const a = document.createElement('a'); a.href = maybe; a.download = resName || 'attachment'; a.textContent = 'Download'; a.className='attachment-link';
+          svAttachment.appendChild(a);
+        } else {
+          svAttachment.textContent = resName || '(attachment)';
+        }
+      } else if (resUrlField) {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "block";
+        const a = document.createElement('a'); a.href = resUrlField; a.target='_blank'; a.rel='noopener'; a.textContent = `Open (${resName || 'attachment'})`; a.className='attachment-link';
+        svAttachment.appendChild(a);
+        const d = document.createElement('a'); d.href = resUrlField; d.download = resName || 'attachment'; d.textContent = ' Download'; d.className='attachment-link';
+        svAttachment.appendChild(d);
+      } else if (evidenceBase64) {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "block";
+        const dataUrl = evidenceBase64ToDataUrl(evidenceBase64, evidenceName);
+        if (dataUrl && dataUrl.startsWith('data:')) {
+          if (dataUrl.startsWith('data:image')) {
+            const img = document.createElement('img'); img.src = dataUrl; img.alt = evidenceName || 'evidence'; img.className='attachment-preview';
+            svAttachment.appendChild(img);
+            const a = document.createElement('a'); a.href = dataUrl; a.download = evidenceName || 'evidence'; a.textContent = 'Download'; a.className='attachment-link';
+            svAttachment.appendChild(a);
+          } else {
+            const a = document.createElement('a'); a.href = dataUrl; a.target='_blank'; a.rel='noopener'; a.textContent = `Open (${evidenceName || 'file'})`; a.className='attachment-link';
+            svAttachment.appendChild(a);
+            const d = document.createElement('a'); d.href = dataUrl; d.download = evidenceName || 'evidence'; d.textContent = ' Download'; d.className='attachment-link';
+            svAttachment.appendChild(d);
+          }
+        } else {
+          svAttachment.textContent = evidenceName ? `Evidence: ${evidenceName}` : '(attachment)';
+        }
+      } else if (evidenceUrl) {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "block";
+        const a = document.createElement('a'); a.href = evidenceUrl; a.target='_blank'; a.rel='noopener'; a.textContent = `Open evidence (${evidenceName || 'file'})`; a.className='attachment-link';
+        svAttachment.appendChild(a);
+        const d = document.createElement('a'); d.href = evidenceUrl; d.download = evidenceName || 'evidence'; d.textContent = ' Download'; d.className='attachment-link';
+        svAttachment.appendChild(d);
+      } else if (evidenceName) {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "block";
+        svAttachment.textContent = `Evidence name: ${evidenceName} (no URL available)`;
+      } else {
+        if (svAttachmentContainer) svAttachmentContainer.style.display = "none";
+      }
+
+      showModal(singleViewModal);
+    }
+
+    if (closeSingleView) closeSingleView.addEventListener("click", ()=> { hideModal(singleViewModal); clearSingleView(); });
+
+    // Sanction modal handlers
+    function openSanctionModal(rec){
+      currentSanctionId = rec.id;
+      if (sanctionNotes) sanctionNotes.value = rec.sanction || "";
+      showModal(sanctionModal);
+    }
+    if (closeSanction) closeSanction.addEventListener("click", ()=> hideModal(sanctionModal));
+    if (saveSanction) saveSanction.addEventListener("click", async ()=>{
+      if (!currentSanctionId) return alert("No record selected.");
+      const text = (sanctionNotes.value || "").trim();
+      if (!text) return alert("Please enter sanction details.");
+      try {
+        await updateDoc(doc(db,"violations",currentSanctionId), {
+          sanction: text,
+          status: "Ongoing",
+          updatedAt: serverTimestamp()
+        });
+        hideModal(sanctionModal);
+        currentSanctionId = null;
+      } catch(e){
+        console.error("Failed to save sanction:", e);
+        alert("Failed to save sanction.");
+      }
+    });
+
+    // Resolve modal handlers (attachment upload saved as data URL)
+    function fileToDataURL(file){
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function openResolveModal(rec){
+      currentResolveId = rec.id;
+      if (resolveNotes) resolveNotes.value = rec.resolutionNotes || "";
+      if (resolveAttachment) resolveAttachment.value = "";
+      showModal(resolveModal);
+    }
+
+    if (closeResolve) closeResolve.addEventListener("click", ()=> {
+      hideModal(resolveModal);
+      currentResolveId = null;
+    });
+
+    if (saveResolve) saveResolve.addEventListener("click", async ()=>{
+      if (!currentResolveId) return alert("No record selected.");
+      const notes = (resolveNotes.value || "").trim();
+      try {
+        let attachmentData = null;
+        let attachmentName = null;
+        const file = (resolveAttachment && resolveAttachment.files && resolveAttachment.files[0]) ? resolveAttachment.files[0] : null;
+        if (file) {
+          attachmentName = file.name;
+          attachmentData = await fileToDataURL(file);
+        }
+
+        if (!notes && !attachmentData) {
+          if (!confirm("No notes or attachment provided. Are you sure you want to mark this case as Resolved?")) return;
+        }
+
+        const payload = {
+          status: "Resolved",
+          resolutionNotes: notes || null,
+          resolutionAttachmentName: attachmentName || null,
+          resolutionAttachmentData: attachmentData || null,
+          resolvedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        await updateDoc(doc(db,"violations",currentResolveId), payload);
+
+        hideModal(resolveModal);
+        currentResolveId = null;
+      } catch (e) {
+        console.error("Failed to save resolution:", e);
+        alert("Failed to save resolution.");
+      }
+    });
+
+    // Initialize violations stream and UI
+    function initViolationReports(){
+      const qV = query(collection(db,"violations"), orderBy("createdAt","desc"));
+      onSnapshot(qV, (snap)=> {
+
+  const newViolations = [];
+
+  snap.docChanges().forEach(change => {
+
+    if(change.type === "added"){
+
+      const v = { id: change.doc.id, ...change.doc.data() };
+
+      newViolations.push(v);
+
+    }
+
+  });
+
+  vioCache = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+
+  renderVio();
+
+  // create notification for new violations
+  newViolations.forEach(v => {
+    createViolationNotification(v);
+  });
+
+  setTimeout(checkViolationReminders, 2000);
+
+});
+
+      if (statusFilter) statusFilter.addEventListener("change", renderVio);
+      if (searchInput) searchInput.addEventListener("input", renderVio);
+    }
+
+   async function createViolationNotification(v){
+
+  try{
+
+    const notifRef = doc(db,"notifications", v.id);
+
+    await setDoc(notifRef,{
+
+      title: "Violation Notice",
+
+      body: `You have committed a violation: "${v.violation}". Please visit the Office of Student Affairs (OSA) for further discussion.`,
+
+      type: "violation_notice",
+
+      toStudentId: v.studentID,
+
+      violationId: v.id,
+
+      read: false,
+
+      createdAt: serverTimestamp()
+
+    });
+
+  }catch(err){
+    console.error("Notification creation failed:", err);
+  }
+
+}
+
+    function checkViolationReminders(){
+      console.log("Checking reminders...");
+
+      const now = new Date();
+
+      vioCache.forEach(async (v)=>{
+
+        const status = String(v.status || "").toLowerCase();
+
+        // only remind pending violations
+        if(status !== "pending" && status !== "open") return;
+
+        if(!v.createdAt || !v.createdAt.toDate) return;
+
+const createdDate = v.createdAt.toDate();
+
+const diffDays = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+
+console.log("Violation:", v.violation, "Days:", diffDays);
+
+        // 7-day reminder
+        if(diffDays >= 7 && !v.reminderSent7){
+
+          await sendReminder(v, "7-day");
+
+          await updateDoc(doc(db,"violations",v.id),{
+            reminderSent7: true,
+            reminder7At: serverTimestamp()
+          });
+
+        }
+
+        // 8-day reminder (1 day after)
+        if(diffDays >= 8 && !v.reminderSent8){
+
+          await sendReminder(v, "8-day");
+
+          await updateDoc(doc(db,"violations",v.id),{
+            reminderSent8: true,
+            reminder8At: serverTimestamp()
+          });
+
+        }
+
+      });
+
+    }
+
+   async function sendReminder(v, type){
+
+  const message = type === "7-day"
+  ? `Reminder: You have an unresolved violation (${v.violation}). Please visit the Office of Student Affairs (OSA).`
+  : `Final Reminder: Please report to the Office of Student Affairs immediately regarding your violation (${v.violation}).`;
+
+  try{
+
+    await addDoc(collection(db,"notifications"),{
+
+      title: type === "7-day" ? "Violation Reminder" : "Final Reminder",
+
+      body: message,
+
+      type: "violation_reminder",
+
+      reminderType: type,   // ADD THIS LINE
+
+      toStudentId: v.studentID,
+
+      violationId: v.id,
+
+      read: false,
+
+      createdAt: serverTimestamp()
+
+    });
+
+  }catch(err){
+    console.error("Reminder notification failed:", err);
+  }
+
+}
+
+    function renderVio(){
+      const filterVal = (statusFilter && statusFilter.value || "All").toLowerCase();
+      const q = (searchInput && (searchInput.value || "") || "").toLowerCase();
+
+      const rows = vioCache.filter(rec=>{
+        const label = normalizeStatus(rec.status);
+        const statusOk = (filterVal==="all") ? true : (label.toLowerCase()===filterVal);
+        const hay = `${rec.studentName||""} ${rec.violation||""} ${(rec.submittedByRole||rec.reportedByRole||"guard")}`.toLowerCase();
+        const searchOk = q ? hay.includes(q) : true;
+        return statusOk && searchOk;
+      });
+
+      if (!vioBody) return;
+      vioBody.innerHTML = "";
+      rows.forEach(rec=>{
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.textContent = rec.studentName || "(Unknown)";
+        // helpful debugging attribute: normalized key
+        tdName.dataset.key = normalizeStudentKey(rec.studentName || "");
+
+        // Offense column: compute the chronological position for THIS record (1st = oldest)
+        const position = offensePositionForRecord(rec); // 1,2,3,...
+        const tdOff = document.createElement("td");
+        const span = document.createElement("span");
+        span.className = 'offense-chip';
+
+        // keep the visual cap for classes (min 1, max 3 used for color/size)
+        const capped = Math.min(Math.max(position || 0, 0), 3) || 0;
+        span.classList.add(`offense-${capped === 0 ? 1 : capped}`);
+
+        // display ordinal label based on position (1st, 2nd, 3rd, 4th, ...)
+        const statusLower = String(rec.status || "").toLowerCase();
+
+        if (statusLower === "resolved") {
+          span.textContent = "✔";
+          span.style.background = "#16a34a"; // green
+        } else {
+          span.textContent = (position && position > 0) ? offenseLabel(position) : "0";
+        }
+        tdOff.appendChild(span);
+
+        const tdViolation = document.createElement("td"); tdViolation.textContent = rec.violation || "(—)";
+        const byRole = (rec.submittedByRole || rec.reportedByRole || "guard");
+        const tdBy = document.createElement("td"); tdBy.textContent = byRole.charAt(0).toUpperCase()+byRole.slice(1);
+        const tdDate = document.createElement("td"); tdDate.textContent = fmtDateMaybe(rec.createdAt);
+        const statusLabel = normalizeStatus(rec.status);
+        const tdStatus = document.createElement("td"); tdStatus.innerHTML = chip(statusLabel);
+
+        const tdAction = document.createElement("td");
+        // Updated action menu: View (single), Sanction, Resolved Case
+        tdAction.innerHTML = `
+          <div class="dropdown">
+  <button class="dropdown-btn">Action ▼</button>
+  <div class="dropdown-content">
+    <div data-action="view">View</div>
+    <div data-action="sanction">Sanction</div>
+    <div data-action="resolved">Resolved Case</div>
+  </div>
+</div>
+
+        `;
+        const drop = tdAction.querySelector(".dropdown");
+        const btn  = tdAction.querySelector(".dropdown-btn");
+
+        btn.addEventListener("click",(e)=>{
+          e.stopPropagation(); // prevent row click from firing when action button is clicked
+          document.querySelectorAll(".dropdown").forEach(d=>{ if(d!==drop) d.classList.remove("show"); });
+          drop.classList.toggle("show");
+        });
+
+        // handle actions (the View here opens single-view ONLY)
+        tdAction.querySelectorAll(".dropdown-content div").forEach(opt=>{
+          opt.addEventListener("click", async (ev)=>{
+            ev.stopPropagation(); // ensure dropdown click doesn't bubble to row
+            const act = opt.getAttribute("data-action");
+            drop.classList.remove("show");
+            if (act==="view") {
+              openSingleView(rec); // <-- single-violation view
+            } else if (act==="sanction") {
+              openSanctionModal(rec);
+            } else if (act==="resolved") {
+              openResolveModal(rec);
+            }
+          });
+        });
+
+        // Row click opens records modal — ignore clicks that originated inside the action dropdown
+        tr.addEventListener("click", (e) => {
+          if (e.target.closest('.dropdown')) return; // clicked an action control -> ignore here
+          openRecordsModalByStudent(rec);
+        });
+
+        tr.append(tdName, tdOff, tdViolation, tdBy, tdDate, tdStatus, tdAction);
+        vioBody.appendChild(tr);
+      });
+    }
+
+    // UI housekeeping
+    document.addEventListener("click", ()=> document.querySelectorAll(".dropdown").forEach(d=>d.classList.remove("show")));
+    window.addEventListener("scroll", ()=> document.querySelectorAll(".dropdown").forEach(d=>d.classList.remove("show")));
+
+    // header helpers
+    window.toggleLogout = function () {
+      const logoutBtn = document.getElementById("logoutBtn");
+      logoutBtn.style.display = logoutBtn.style.display === "block" ? "none" : "block";
+    };
+    window.openModal  = function () { document.getElementById("modalOverlay").style.display = "flex"; };
+    window.closeModal = function () { document.getElementById("modalOverlay").style.display = "none"; };
+    window.logoutNow  = async function () { await signOut(auth); window.location.href = "Login.html"; };
+
+  </script>
+</body>
+</html>

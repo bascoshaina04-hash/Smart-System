@@ -1,0 +1,131 @@
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+    h2{font-family:Genos,sans-serif;font-size:50px;margin-bottom:13px}
+    h3{font-family:Genos,sans-serif}
+
+    /* Remove page scroll, only table-wrapper will scroll when needed */
+    html,body{height:100vh;overflow:hidden}
+    body{background:#fff;display:flex;min-height:100vh}
+
+    /* Sidebar */
+    .sidebar{background:#020120;width:265px;padding:20px;color:#fff;flex-shrink:0}
+    .logo{display:flex;align-items:center;margin-bottom:20px}
+    .logo img{width:70px;margin-right:10px;margin-top:-20px}
+    .sidebar button{background:#fdb827;font-size:17px;border:none;color:#000;padding:15px;width:95%;margin-bottom:10px;font-weight:bold;cursor:pointer;border-radius:8px;text-align:center;position:relative;margin-left:5px}
+    .sidebar button.active::after{content:'◀';color:#fff;position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:18px}
+
+    /* Main area */
+    .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .header{display:flex;justify-content:flex-end;align-items:center;background:#020120;height:97px;padding:0 30px;flex-shrink:0}
+    .user-container{position:relative}
+    .user-icon-container{width:50px;height:50px;background:#ccc;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .user-icon-container img{width:40px;height:43px;border-radius:50%;object-fit:cover}
+    .logout{position:absolute;top:60px;right:0;background:#fdb827;padding:10px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;display:none;z-index:10}
+
+    /* Content area: center content horizontally */
+    .content-area{padding:18px 24px 24px 0;flex:1;display:flex;flex-direction:column;align-items:center}
+    .page-title{font-family:Genos,sans-serif;font-size:35px;margin:12px 0;color:#111;text-align:center}
+
+    /* Tools row centered */
+    .tool-row{display:flex;justify-content:center;align-items:center;gap:16px;width:100%;margin-top:6px}
+    .left-tools{display:flex;gap:10px;align-items:center;margin-right: 355px;}
+    .right-tools{display:flex;align-items:center;gap:8px}
+    .btn{padding:8px 12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+    .btn-primary{background:#fdb827;color:#000}
+    .btn-secondary{background:#e6e6e6;color:#333}
+    .search{padding:8px 12px;border-radius:8px;border:1px solid #ccc;width:220px}
+
+    /* Filter select */
+    .filter-select{padding:8px 10px;border-radius:8px;border:1px solid #ccc;background:#fff;font-weight:600}
+
+    /* TABLE WRAPPER — centered and scrollable internally */
+    .table-wrapper{
+      width:780px;                /* fixed table width for consistent centering like screenshot */
+      max-height: 420px;         /* controls scrollable height */
+      border-radius:12px;        /* rounded corners */
+      overflow:auto;             /* internal scrollbar only (appears only when needed) */
+      background:#fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.04) inset;
+      margin-top:14px;
+    }
+
+    /* Table inside the wrapper fills it */
+    .table-wrapper table{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      min-width:600px;
+    }
+    thead{background:#273ea3;color:#fff;position:sticky;top:0;z-index:2}
+    th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #eee;overflow-wrap:break-word;vertical-align:middle}
+    tbody tr:hover{background:#f7f9ff}
+
+    /* Columns: Student Name wide, Action narrower */
+    th:nth-child(1),td:nth-child(1){width:70%}
+    th:nth-child(2),td:nth-child(2){width:30%}
+
+    /* Align the action header to the right so the Action button aligns below it */
+    thead th:last-child{ text-align:right; padding-right:20px; }
+
+    /* Make the action cell contents right aligned */
+    td .action-cell{ display:flex; align-items:center; justify-content:flex-end; gap:8px; padding-right:12px; }
+
+    /* Status chip (if used) */
+    .status-chip{display:inline-block;padding:6px 10px;border-radius:10px;color:#fff;font-weight:700;font-size:13px;white-space:nowrap}
+    .status-pending{background:#9E9E9E}
+    .status-resolved{background:#4CAF50}
+    .status-escalated{background:#F44336}
+
+    /* Action dropdown (default hidden) */
+    .dropdown{position:relative;display:inline-block}
+    .dropdown-btn{background:#fdb827;color:#000;padding:6px 10px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+    /* we'll move the .dropdown-content to body when opened so these styles are used for the 'floating' version */
+    .dropdown-content{
+      display:none;
+      position:absolute;
+      background:#fff;
+      min-width:140px;
+      border:1px solid #ddd;
+      box-shadow:0 8px 16px rgba(0,0,0,.2);
+      border-radius:8px;
+      white-space:nowrap;
+    }
+    /* floating style when moved to body */
+    .floating-dropdown{
+      position:fixed !important;
+      display:block !important;
+      right:auto !important; /* we compute left/top in JS */
+      z-index:20000 !important;
+    }
+    .dropdown-content div{padding:10px;cursor:pointer}
+    .dropdown-content div:hover{background:#f1f1f1}
+
+    /* Modal detail (right-hand card) */
+/* MODAL OVERLAY */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:999;
+
+  align-items:flex-start;      /* push down */
+  justify-content:center;
+  padding-top:90px;            /* 👈 move modal DOWN */
+}
+
+/* MODAL CARD */
+.detail-card{
+  width:10px;                 /* 👈 CONTROL WIDTH HERE */
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 18px 40px rgba(3,8,20,0.25);
+  padding:20px;
+  position:relative;
+}
+
+    .close-x{position:absolute;right:22px;top:16px;background:#fff;border-radius:50%;width:32px;height:32px;border:none;cursor:pointer;font-weight:700;color:#333;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+
+    @media (max-width:100px){
+      .table-wrapper{max-height:360px; width: 92%}
+      .search{width:160px}
+    }

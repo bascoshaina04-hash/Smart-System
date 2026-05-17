@@ -1,0 +1,424 @@
+/* ===== Base / Layout (kept) ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+h2 { font-family: Genos, sans-serif; font-size: 50px; margin-bottom: 13px; }
+body { background-color: #ffffff; display: flex; min-height: 100vh; }
+.sidebar { background-color: #020120; width: 265px; padding: 20px; color: white; }
+.logo { display: flex; align-items: center; margin-bottom: 20px; }
+.logo img { width: 70px; margin-right: 10px; margin-top: -20px; }
+.sidebar button { background-color: #fdb827; font-size: 17px; border: none; color: black; padding: 15px; width: 95%; margin-bottom: 10px; font-weight: bold; cursor: pointer; border-radius: 8px; text-align: center; position: relative; margin-left: 5px; }
+.sidebar button.active::after { content: '◀'; color: white; position: absolute; right: -1px; top: 50%; transform: translateY(-50%); font-size: 18px; }
+
+.main-content { flex-grow: 1; padding: 0; }
+.header { display: flex; justify-content: space-between; align-items: center; background-color: #020120; height: 97px; padding: 0 30px; }
+.header h2 { color: #fff; margin: 0; font-size: 32px; }
+.user-container { position: relative; }
+.user-icon-container { width: 50px; height: 50px; background-color: #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.user-icon-container img { width: 40px; height: 43px; border-radius: 50%; object-fit: cover; }
+.logout { position: absolute; top: 60px; right: 0; background-color: #fdb827; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: none; z-index: 10; }
+
+/* ===== Controls row ===== */
+.top-controls { display: flex; align-items: center; gap: 12px; justify-content: flex-end; margin: 80px 113px 20px 0; }
+.filter-container select, .search-container input { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; }
+.add-btn { background:#344CB7; color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:bold; cursor:pointer; }
+.add-btn:hover { opacity: .9; }
+
+/* ===== TABLE SCROLL WRAPPER (with rounded corners) ===== */
+.table-wrapper {
+  width: 80%;
+  max-height: 420px;
+  overflow-y: auto;        /* scroll enabled */
+  overflow-x: visible;
+  margin-left: 145px;
+  margin-top: 20px;
+  border-radius: 12px;
+  background: white;
+  padding-right: 1px;       /* fixes right-edge clipping */
+}
+
+/* ===== Table Styles (inner table kept visually same; no extra outer border) ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 0;         /* inner table corners not needed, wrapper handles it */
+  border: none;             /* remove duplicate border; wrapper provides border */
+  table-layout: fixed;
+  background: transparent;
+}
+
+thead { background-color: #273ea3; color: white; }
+th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #ddd; overflow-wrap: break-word; }
+/* also prevent inner clipping by rows/cells */
+thead, tbody, tr, th, td { overflow: visible; }
+
+th:nth-child(1), td:nth-child(1) { width: 18%; } 
+th:nth-child(2), td:nth-child(2) { width: 8%; } 
+th:nth-child(3), td:nth-child(3) { width: 16%; } 
+th:nth-child(4), td:nth-child(4) { width: 12%; } 
+th:nth-child(5), td:nth-child(5) { width: 10%; } 
+th:nth-child(6), td:nth-child(6) { width: 10%; } 
+th:nth-child(7), td:nth-child(7) { width: 10%; } 
+
+/* Status chips */
+.status-chip { display:inline-block; padding:6px 10px; border-radius:10px; color:#fff; font-weight:bold; font-size:12px; white-space:nowrap; }
+.status-pending   { background:#9E9E9E; }
+.status-resolved  { background:#4CAF50; }
+.status-escalated { background:#F44336; }
+
+/* Dropdown - button style tuned to match the screenshot and stay visible */
+/* CLEAN ACTION DROPDOWN */
+.dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dropdown-btn {
+  min-width: 90px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #cfd6e0;
+  background: #fdb827;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: #ffffff;
+  border: 1px solid #e0e6ef;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  z-index: 9999;
+  padding: 6px 0;
+  justify-content: left;
+}
+
+
+.dropdown-content.align-right { left: auto !important; right: 0 !important; }
+.dropdown-content div {
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dropdown-content div:hover {
+  background: #f2f6ff;
+}
+
+.dropdown.show .dropdown-content { display: block; }
+
+/* Modal base */
+.modal { display:none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; align-items: center; justify-content: center; }
+.modal-card { background:#fff; width: 520px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.2); padding: 20px 22px; }
+.modal-card h3 { margin-bottom: 12px; color:#273ea3; }
+.form-row { display:flex; gap: 12px; }
+.form-col { flex:1; display:flex; flex-direction:column; margin-bottom:10px; }
+label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color:#333; }
+input[type="text"], textarea, select, input[type="datetime-local"], input[type="number"] {
+  padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+}
+textarea { resize: vertical; min-height: 70px; }
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top: 12px; }
+.btn { border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:bold; }
+.btn-primary { background:#344CB7; color:#fff; }
+.btn-danger  { background:#F44336; color:#fff; }
+.btn-secondary{ background:#e0e0e0; color:#333; }
+
+/* Bigger, more readable violations modal */
+#violationsModal .modal-card {
+  width: 90vw;
+  max-width: 1400px;
+  height: 85vh;
+  max-height: 95vh;
+  padding: 24px;
+  border-radius: 12px;
+  overflow: auto;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  font-size: 1rem;
+  background: #fff;
+}
+
+/* Table styles: white cells for readability, subtle stripes and hover */
+.types-table { width:100%; border-collapse:collapse; margin-top:8px; background: #eef3f7; border-radius: 6px; overflow: hidden; }
+.types-table thead th { text-align:left; font-weight:700; background: #0b3b66; color: #fff; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.types-table tbody td { background: #ffffff; color: #111; padding: 12px 14px; vertical-align: middle; border-bottom: 1px solid #f0f4f7; font-weight:500; }
+.types-table tbody tr:hover td { background: #fbfdff; transform: translateZ(0); }
+.types-table td { word-break: break-word; }
+
+#addTypeModal .modal-card input,
+#addTypeModal .modal-card select {
+  padding: 10px;
+  font-size: 0.98rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  width:100%;
+  box-sizing:border-box;
+}
+
+.hidden { display:none !important; }
+.muted { color:#666; font-size:0.95rem; }
+.small-btn { padding:6px 8px; font-size:0.95rem; }
+.btn { padding:8px 12px; border-radius:8px; cursor:pointer; }
+.btn-primary { background:#1976d2; color:#fff; border:none; }
+.btn-secondary { background:#e0e0e0; color:#222; border:none; }
+.btn-danger { background:#d32f2f; color:#fff; border:none; }
+
+/* base modal styles - hidden by default */
+.modal { align-items: center; justify-content: center; display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); }
+/* visible modal uses .show */
+.modal.show { display:flex; }
+/* ensure violations modal z-index lower than add modal */
+#violationsModal { z-index: 1000; }
+#addTypeModal { z-index: 1100; }
+
+#violationsModal .modal-card { margin: 24px auto; }
+
+/* small status chip for violations UI (existing) */
+.status-chip { padding:4px 8px; border-radius:6px; font-size:0.85rem; }
+.status-pending { background:#FFF3CD; color:#7A5A00; }
+.status-resolved { background:#C8E6C9; color:#1B5E20; }
+.status-escalated { background:#FFCDD2; color:#7A0000; }
+.status-sanctioned { background:#FFE0B2; color:#7A3D00; }
+
+/* Ensure dropdown button and menu always visible and clickable */
+/* (z-index set on .dropdown above) */
+
+/* ACTION COLUMN FIX */
+table td:nth-child(7),
+table th:nth-child(7) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+table td:last-child { white-space:nowrap; }
+.dropdown, .dropdown * { -webkit-user-select: none; user-select: none; }
+
+/* Add-type modal sizing */
+#addTypeModal .modal-card { max-width:520px; padding:18px; max-height:70vh; border-radius:10px; }
+
+/* Small responsive tweaks */
+@media (max-width:720px){
+  #violationsModal .modal-card { width: 96vw; padding: 16px; }
+  .types-table thead th, .types-table tbody td { padding:10px 8px; }
+  #addTypeModal .modal-card { width: 92vw; padding:12px; }
+}
+
+/* subtle header style inside modal */
+#violationsModal h2, #addTypeModal h3 { color:#0b3b66; font-weight:700; }
+
+/* view modal inputs read-only look */
+.readonly-input { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #eee; background:#fafafa; box-sizing:border-box; }
+.readonly-text { white-space:pre-wrap; background:#fafafa; padding:10px; border-radius:6px; border:1px solid #eee; }
+
+/* minimal modal/read-only styles */
+.readonly-input { width:100%; padding:8px 10px; border-radius:6px; border:1px solid #eee; background:#fafafa; box-sizing:border-box; }
+.readonly-text { white-space:pre-wrap; background:#fafafa; padding:10px; border-radius:6px; border:1px solid #eee; }
+.attachment-preview { max-width:90%; max-height:300px; border-radius:6px; border:1px solid #e0e0e0; display:block; margin-top:8px; }
+.attachment-link { display:inline-block; margin-top:8px; padding:6px 8px; border-radius:6px; border:1px solid #ddd; background:#fff; text-decoration:none; color:#0b3b66; }
+
+/* Offense chips with distinct colors */
+.offense-chip { display:inline-block; padding:6px 10px; border-radius:8px; font-weight:700; color:#fff; min-width:44px; text-align:center; }
+.offense-1 { background: #1976d2; /* blue */ border: 1px solid rgba(25,118,210,0.15); }
+.offense-2 { background: #ff9800; /* amber */ border: 1px solid rgba(255,152,0,0.15); }
+.offense-3 { background: #d32f2f; /* red */ border: 1px solid rgba(211,47,47,0.15); }
+
+/* make rows look clickable */
+#vio-body tr { cursor: pointer; }
+#vio-body tr:hover td { background: #fbfdff; }
+
+/* types table inside view modal */
+.records-table { width:100%; border-collapse:collapse; margin-top:8px; background: #fff; }
+.records-table thead th { text-align:left; font-weight:700; background:#0b3b66; color:#fff; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.records-table tbody td { padding:8px 10px; border-bottom:1px solid #f0f4f7; vertical-align:top; font-size:0.95rem; }
+
+/* single view modal layout */
+.single-view-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+.single-view-grid .col { display:flex; flex-direction:column; gap:6px; }
+
+/* small responsive tweak */
+@media (max-width:720px){
+  .offense-chip { padding:5px 8px; font-size:0.95rem; min-width:36px; }
+  .records-table thead th, .records-table tbody td { padding:6px 8px; font-size:0.9rem; }
+  .single-view-grid { grid-template-columns:1fr; }
+}
+
+/* status chip styles reused from main app (ensure these exist in admin css too) */
+.status-chip { padding:4px 8px; border-radius:6px; font-size:0.85rem; display:inline-block; }
+.status-pending { background:#FFF3CD; color:#7A5A00; }
+.status-resolved { background:#C8E6C9; color:#1B5E20; }
+.status-escalated { background:#FFCDD2; color:#7A0000; }
+.status-sanctioned { background:#FFE0B2; color:#5D4037; }
+
+/* make records modal more prominent, comfortable width and height */
+#recordsModal .modal-card {
+  width: 92vw;
+  max-width: 1100px;         /* matches the change you made earlier */
+  max-height: 80vh;
+  padding: 22px 26px;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(8, 22, 50, 0.35);
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  overflow: auto;
+  margin: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* modal title */
+#recordsModal h3 {
+  font-family: Genos, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #0b3b66;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+/* student header area: nicer layout */
+#recordsModal > .modal-card > div:first-of-type {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* readonly look for student and total */
+#rStudentName, #rOffenseCount {
+  font-weight: 700;
+  background: #f7f9fc;
+  border: 1px solid #e6eef8;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  color: #0b2b51;
+}
+
+/* records table: improved readability */
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(16, 38, 86, 0.06);
+}
+
+/* header - clear blue brand */
+.records-table thead th {
+  background: #0b3b66;
+  color: #fff;
+  font-weight: 700;
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 0.97rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* body cells */
+.records-table tbody td {
+  padding: 12px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f4f7;
+  font-size: 0.95rem;
+  color: #1b2b3b;
+  background: #fff;
+  word-break: break-word;
+}
+
+/* attachment column sizing and layout */
+.records-table thead th:last-child,
+.records-table tbody td:last-child {
+  min-width: 200px;
+  width: 22%;
+}
+
+/* label for "(none)" look */
+.records-table td em {
+  color: #777;
+  font-style: normal;
+}
+
+/* image preview inside table (thumbnail) */
+.records-table img.attachment-thumb {
+  display: block;
+  max-width: 160px;
+  max-height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6eef8;
+  box-shadow: 0 4px 12px rgba(12,30,60,0.06);
+  margin-bottom: 6px;
+}
+
+/* attachment links styling */
+.attachment-link {
+  display: inline-block;
+  margin-right: 8px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: #ffffff;
+  border: 1px solid #d7dde6;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #0b3b66;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.attachment-link:hover { background:#f4f8ff; box-shadow: 0 6px 16px rgba(11,59,114,0.06); }
+
+/* when only filename is present, show subdued badge */
+.records-table .attachment-name {
+  display: block;
+  color: #3c4a59;
+  font-weight: 600;
+  background: #f6f9fb;
+  border: 1px dashed #e6eef8;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+/* align table action button column to avoid overlap */
+.records-table td:last-child, .records-table th:last-child { text-align: left; }
+
+/* footer area (close button) keep visible and floating right */
+#recordsModal .modal-card .modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(10,20,40,0.03);
+  padding-top: 12px;
+}
+
+/* responsive improvements */
+@media (max-width: 920px) {
+  #recordsModal .modal-card { max-width: 94vw; padding: 16px; max-height: 85vh; }
+  .records-table thead th, .records-table tbody td { padding: 10px; font-size: 0.9rem; }
+  .records-table img.attachment-thumb { max-width: 120px; max-height: 70px; }
+}
+@media (max-width: 520px) {
+  #recordsModal .modal-card { width: 96vw; padding: 12px; border-radius: 10px; }
+  .records-table thead { display: none; } /* mobile: stack rows if you need */
+  .records-table, .records-table tbody, .records-table tr, .records-table td { display: block; width: 100%; }
+  .records-table tr { margin-bottom: 10px; border-bottom: 1px solid #eef4f8; padding-bottom: 8px; }
+  .records-table td { padding: 6px 0; }
+  .records-table td:before { font-weight: 700; display:block; margin-bottom: 6px; color:#0b3b66; }
+  .records-table td:nth-of-type(1):before { content: "Violation"; }
+  .records-table td:nth-of-type(2):before { content: "Date"; }
+  .records-table td:nth-of-type(3):before { content: "Status"; }
+  .records-table td:nth-of-type(4):before { content: "Sanction / Notes"; }
+  .records-table td:nth-of-type(5):before { content: "Attachment"; }
+}

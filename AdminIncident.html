@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin • Incident Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="AdminIncident.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='AdminUI1.html'">Home</button>
+    <button onclick="window.location.href='AdminAppoint.html'">Appointment</button>
+    <button onclick="window.location.href='AdminVio.html'">Violations</button>
+    <button onclick="window.location.href='AdminCert.html'">Certifications</button>
+    <button onclick="window.location.href='AdminAnn.html'">Announcements</button>
+    <button class="active" onclick="window.location.href='AdminIncident.html'">Incidents</button>
+    <button onclick="window.location.href='AdminReport1.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="openLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <div class="search-container">
+        <input type="text" id="search" placeholder="Search...">
+      </div>
+      <button class="primary-btn" onclick="openNotifyModal()">Notify Student</button>
+    </div>
+    <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Student ID</th>
+          <th>Location</th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Action</th>
+
+        </tr>
+      </thead>
+      <tbody id="annBody"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <div id="viewModal" class="modal">
+  <div class="modal-card modal-view">
+    <h3>Incident Details</h3>
+
+    <div class="view-grid">
+      <div class="field">
+        <label>Student Name</label>
+        <div class="field-box" id="vStudent"></div>
+      </div>
+
+      <div class="field">
+        <label>Student ID</label>
+        <div class="field-box" id="vID"></div>
+      </div>
+
+      <div class="field">
+        <label>Location</label>
+        <div class="field-box" id="vLocation"></div>
+      </div>
+
+      <div class="field">
+        <label>Date</label>
+        <div class="field-box" id="vDate"></div>
+      </div>
+
+      <div class="field full">
+        <label>Kind</label>
+        <div class="field-box" id="vKind"></div>
+      </div>
+
+      
+
+      <div class="field full" id="incidentImageField" style="display:none;">
+  <label>Attached Image</label>
+  <img
+    id="vImage"
+    src=""
+    alt="Incident Image"
+    style="
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    "
+  />
+</div>
+
+
+      <div class="modal-actions">
+  <button type="button" onclick="event.stopPropagation(); closeViewModal()">
+
+  Close
+</button>
+
+</div>
+    </div>
+
+  </div>
+</div>
+
+
+
+    <div id="sanctionModal" class="modal">
+  <div class="modal-card">
+    <h3>Sanction Incident</h3>
+
+    <textarea
+      id="sanctionRemarks"
+      placeholder="Enter sanction remarks..."
+    ></textarea>
+
+    <div class="modal-actions">
+     <button type="button" onclick="event.stopPropagation(); cancelSanction()">
+        Cancel
+        </button>
+
+        <button type="button" onclick="event.stopPropagation(); saveSanction()">
+        Save
+        </button>
+
+    </div>
+  </div>
+</div>
+
+
+   <div id="resolveModal" class="modal">
+  <div class="modal-card">
+    <h3>Resolve Incident</h3>
+
+    <textarea
+      id="resolveNotes"
+      placeholder="Enter resolution notes..."
+    ></textarea>
+
+    <input
+      type="file"
+      id="resolveFile"
+      accept="image/*"
+    />
+
+    <div class="modal-actions">
+      <button type="button" onclick="event.stopPropagation(); cancelResolve()">
+
+        Cancel
+        </button>
+
+      <button type="button" onclick="event.stopPropagation(); confirmResolve();">
+        Resolve
+        </button>
+
+    </div>
+  </div>
+</div>
+
+     <!-- Notify Modal -->
+  <div id="notifyModal" class="modal">
+    <div class="modal-card">
+      <h3 id="notify_stud">Notify Student</h3>
+
+      <input id="nStudentID" type="text" placeholder="Enter Student ID"/>
+      <input id="nStudentName" type="text" placeholder="Student Name" disabled/>
+      <input id="nEmail" type="email" placeholder="Email" disabled/>
+      <input id="nContact" type="text" placeholder="Contact Number" disabled/>
+
+      <!-- ✅ NEW: Violation Category -->
+    <select id="nViolationCategory">
+      <option value="">Select Violation Category</option>
+      <option value="Light">Light Offense</option>
+      <option value="Major">Major Offense</option>
+      <option value="Grave">Grave Offense</option>
+    </select>
+
+    <!-- ✅ NEW: Violation List (depends on category) -->
+    <select id="nViolation">
+      <option value="">Select Violation</option>
+    </select>
+
+      <textarea id="nComment" placeholder="Enter comment..."></textarea>
+
+      <div class="modal-actions">
+        <button onclick="cancelNotify()">Cancel</button>
+        <button onclick="sendStudentNotification()">Send</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+  import {
+  getFirestore, collection, getDocs, addDoc,
+  doc, updateDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+  import {
+    getAuth,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+
+
+
+  /* ---------------- FIREBASE INIT ---------------- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+    authDomain: "smart-723de.firebaseapp.com",
+    projectId: "smart-723de",
+    storageBucket: "smart-723de.appspot.com",
+    messagingSenderId: "316347306734",
+    appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+
+  function showModal(id) {
+  document.getElementById(id).classList.add("show");
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove("show");
+}
+
+
+  let currentIncident = null;
+
+  /* ---------------- VIOLATION OPTIONS ---------------- */
+const violationMap = {
+  Light: [
+    "Improper Uniform",
+    "Late Attendance",
+    "Loitering",
+    "Failure to bring ID"
+  ],
+  Major: [
+    "Disrespect to Authority",
+    "Cheating",
+    "Bullying",
+    "Unauthorized Absence"
+  ],
+  Grave: [
+    "Physical Assault",
+    "Drug Possession",
+    "Vandalism",
+    "Theft"
+  ]
+};
+
+const categorySelect = document.getElementById("nViolationCategory");
+const violationSelect = document.getElementById("nViolation");
+
+categorySelect.addEventListener("change", () => {
+  const category = categorySelect.value;
+
+  // reset violation dropdown
+  violationSelect.innerHTML = `<option value="">Select Violation</option>`;
+
+  if (!category || !violationMap[category]) return;
+
+  violationMap[category].forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = v;
+    violationSelect.appendChild(opt);
+  });
+});
+
+
+  /* ---------------- STUDENTS CACHE ---------------- */
+let studentsCache = [];
+
+async function loadStudentsOnce() {
+  if (studentsCache.length) return;
+  const snap = await getDocs(collection(db, "students"));
+  studentsCache = snap.docs.map(d => d.data());
+}
+
+/* ---------------- MODALS ---------------- */
+
+
+window.openNotifyModal = () => {
+  nStudentName.value = "";
+  nStudentID.value = "";
+  nEmail.value = "";
+  nContact.value = "";
+  nComment.value = "";
+  showModal("notifyModal");
+};
+
+//* ---------------- AUTO-FILL WHILE TYPING ---------------- */
+document.getElementById("nStudentID").addEventListener("input", async (e) => {
+
+  const typedID = e.target.value.trim();
+
+  if (!typedID) {
+    nStudentName.value = "";
+    nEmail.value = "";
+    nContact.value = "";
+    return;
+  }
+
+  await loadStudentsOnce();
+
+  const student = studentsCache.find(s =>
+    (s.studentID || s.studentId || s.uid || "") === typedID
+  );
+
+  if (!student) return;
+
+  // Autofill student info
+  nStudentName.value =
+    student.fullName ||
+    student.studentName ||
+    student.name ||
+    "";
+
+  nEmail.value =
+    student.email ||
+    student.contactEmail ||
+    student.studentEmail ||
+    "";
+
+  nContact.value =
+    student.contact ||
+    student.contact_num ||
+    student.contactNumber ||
+    student.mobile ||
+    student.phone ||
+    "";
+
+});
+
+
+/* ---------------- SEND = CREATE VIOLATION ---------------- */
+window.sendStudentNotification = async () => {
+  const studentName = nStudentName.value.trim();
+  const studentID = nStudentID.value.trim();
+  const category = nViolationCategory.value;
+  const violation = nViolation.value;
+  const comment = nComment.value.trim();
+
+  if (!studentName || !studentID || !category || !violation) {
+    alert("Please complete all required fields.");
+    return;
+  }
+
+  await addDoc(collection(db, "violations"), {
+    studentName,
+    studentID,
+    email: nEmail.value,
+    contactNumber: nContact.value,
+    violationCategory: category,
+    violation,
+    remarks: comment,
+    status: "Pending",
+    source: "Admin Incident Notify",
+    createdAt: serverTimestamp()
+  });
+
+  closeModal("notifyModal");
+  alert("Violation recorded successfully");
+};
+
+
+/* ---------- VIEW ---------- */
+window.openViewModal = (r) => {
+  document.getElementById("vStudent").textContent = r.studentName;
+  document.getElementById("vID").textContent = r.studentID;
+  document.getElementById("vLocation").textContent = r.location;
+  document.getElementById("vDate").textContent = r.date;
+  document.getElementById("vKind").textContent = r.kind;
+
+  const imgField = document.getElementById("incidentImageField");
+  const img = document.getElementById("vImage");
+
+  // ✅ SHOW IMAGE IF EXISTS
+  if (r.imageDataUrl) {
+    img.src = r.imageDataUrl;
+    imgField.style.display = "block";
+  } else {
+    img.src = "";
+    imgField.style.display = "none";
+  }
+
+  showModal("viewModal");
+};
+
+
+/* ---------- SANCTION ---------- */
+window.openSanctionModal = (r, isEdit = false) => {
+  currentIncident = r;
+
+  const modalTitle = document.querySelector("#sanctionModal h3");
+  const saveBtn = document.querySelector(
+    "#sanctionModal .modal-actions button:last-child"
+  );
+
+  if (isEdit) {
+    modalTitle.textContent = "Edit Sanction";
+    saveBtn.textContent = "Update Sanction";
+
+    // preload existing remarks
+    document.getElementById("sanctionRemarks").value =
+      r.sanctionRemarks || "";
+  } else {
+    modalTitle.textContent = "Sanction Incident";
+    saveBtn.textContent = "Save";
+    document.getElementById("sanctionRemarks").value = "";
+  }
+
+  showModal("sanctionModal");
+};
+
+window.cancelSanction = () => {
+  document.getElementById("sanctionRemarks").value = "";
+  currentIncident = null;
+  closeModal("sanctionModal");
+};
+
+
+window.saveSanction = async () => {
+  if (!currentIncident) return;
+
+  const remarks = document.getElementById("sanctionRemarks").value.trim();
+  if (!remarks) {
+    alert("Sanction remarks are required");
+    return;
+  }
+
+  await updateDoc(doc(db, "incidentReports", currentIncident.id), {
+    hasSanction: true,
+    sanctionRemarks: remarks,
+    status: "Sanctioned",
+    sanctionedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  closeModal("sanctionModal");
+
+  // ✅ REFRESH TABLE DATA
+  await loadIncidentReports();
+
+  alert("Incident sanctioned successfully.");
+};
+
+
+window.closeViewModal = () => {
+  document.getElementById("vStudent").textContent = "";
+  document.getElementById("vID").textContent = "";
+  document.getElementById("vLocation").textContent = "";
+  document.getElementById("vDate").textContent = "";
+  document.getElementById("vKind").textContent = "";
+
+  const img = document.getElementById("vImage");
+  const imgField = document.getElementById("incidentImageField");
+
+  img.src = "";
+  imgField.style.display = "none";
+
+  closeModal("viewModal");
+};
+
+
+window.confirmResolve = async () => {
+  if (!currentIncident) {
+    alert("No incident selected");
+    return;
+  }
+
+  const btn = document.querySelector(
+    "#resolveModal .modal-actions button:last-child"
+  );
+
+  btn.disabled = true;
+  btn.textContent = "Resolving...";
+
+  try {
+    const notes = document.getElementById("resolveNotes").value.trim();
+    const fileInput = document.getElementById("resolveFile");
+
+    let imageDataUrl = null;
+    let imageName = null;
+    let imageType = null;
+    let imageSize = null;
+
+    // ✅ INLINE IMAGE (same as announcements)
+    if (fileInput.files && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+
+      imageDataUrl = await fileToDataURL(file);
+      imageName = file.name;
+      imageType = file.type;
+      imageSize = file.size;
+    }
+
+    await updateDoc(doc(db, "incidentReports", currentIncident.id), {
+      status: "Resolved",
+      resolutionNotes: notes || "",
+      resolutionImageDataUrl: imageDataUrl,
+      resolutionImageName: imageName,
+      resolutionImageType: imageType,
+      resolutionImageSize: imageSize,
+      resolvedAt: serverTimestamp(),
+      notifyStudent: true
+    });
+
+    closeModal("resolveModal");
+
+  } catch (err) {
+    console.error("Resolve failed:", err);
+    alert("Failed to resolve incident.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Resolve";
+  }
+};
+
+
+window.cancelResolve = () => {
+  document.getElementById("resolveNotes").value = "";
+  document.getElementById("resolveFile").value = "";
+  currentIncident = null;
+  closeModal("resolveModal");
+};
+
+
+
+
+/* ---------- RESOLVE ---------- */
+window.openResolveModal = (r) => {
+  currentIncident = r;
+  document.getElementById("resolveNotes").value = "";
+  document.getElementById("resolveFile").value = "";
+  showModal("resolveModal");
+};
+
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+window.cancelNotify = () => {
+  nStudentName.value = "";
+  nStudentID.value = "";
+  nEmail.value = "";
+  nContact.value = "";
+  nViolationCategory.value = "";
+  nViolation.innerHTML = `<option value="">Select Violation</option>`;
+  nComment.value = "";
+  closeModal("notifyModal");
+};
+
+
+  /* ---------------- DOM ---------------- */
+  const tbody = document.getElementById("annBody");
+  const searchInput = document.getElementById("search");
+
+  let allIncidents = [];
+
+  /* ---------------- RENDER TABLE ---------------- */
+function renderTable(rows) {
+  tbody.innerHTML = "";
+
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${r.studentName || "-"}</td>
+      <td>${r.studentID || "-"}</td>
+      <td>${r.location || "-"}</td>
+      <td>${r.date || "-"}</td>
+      <td>${r.kind || "-"}</td>
+
+      <!-- STATUS COLUMN -->
+      <td>
+        <span class="status-badge status-${(r.status || "").toLowerCase()}">
+          ${r.status || "Pending"}
+        </span>
+      </td>
+
+      <td>
+        <div class="dropdown">
+          <button class="dropdown-btn">Action ▼</button>
+          <div class="dropdown-content">
+            <div data-action="view">View</div>
+            ${r.status !== "Resolved" ? `<div data-action="sanction">Sanction</div>` : ""}
+            ${r.status !== "Resolved" ? `<div data-action="resolve">Resolve Case</div>` : ""}
+          </div>
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+
+    // dropdown logic
+    const dropdown = tr.querySelector(".dropdown");
+    const btn = tr.querySelector(".dropdown-btn");
+
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+
+      const isOpen = dropdown.classList.contains("show");
+
+      document.querySelectorAll(".dropdown").forEach(d =>
+        d.classList.remove("show")
+      );
+
+      if (!isOpen) dropdown.classList.add("show");
+    });
+
+    dropdown.querySelectorAll("[data-action]").forEach(opt => {
+      opt.addEventListener("click", e => {
+        e.stopPropagation();
+        dropdown.classList.remove("show");
+
+        const action = opt.dataset.action;
+        if (action === "view") openViewModal(r);
+        if (action === "sanction") {
+        const isEdit = r.status === "Sanctioned";
+        openSanctionModal(r, isEdit);
+      }
+
+        if (action === "edit-sanction") openSanctionModal(r, true);
+        if (action === "resolve") openResolveModal(r);
+      });
+    });
+  });
+}
+
+
+
+
+
+// prevent modal content from closing the modal
+// close ONLY when clicking the dark overlay
+document.querySelectorAll(".modal").forEach(modal => {
+  modal.addEventListener("click", e => {
+    if (e.target === modal) {
+      modal.classList.remove("show");
+      currentIncident = null;
+    }
+  });
+});
+
+
+
+  /* ---------------- SEARCH ---------------- */
+  function applySearch() {
+    const q = searchInput.value.toLowerCase();
+
+    const filtered = allIncidents.filter(r =>
+      r.studentName.toLowerCase().includes(q) ||
+      r.studentID.toLowerCase().includes(q) ||
+      r.location.toLowerCase().includes(q) ||
+      r.kind.toLowerCase().includes(q)
+    );
+
+    renderTable(filtered);
+  }
+
+  searchInput.addEventListener("input", applySearch);
+
+  /* ---------------- LOAD DATA ---------------- */
+  async function loadIncidentReports() {
+  const snap = await getDocs(collection(db, "incidentReports"));
+
+  allIncidents = snap.docs.map(docSnap => {
+    const d = docSnap.data();
+
+    // ✅ STUDENT-SUBMITTED IMAGE
+    let imageDataUrl = null;
+
+    if (Array.isArray(d.evidences) && d.evidences.length > 0) {
+      const ev = d.evidences[0];
+
+      if (ev.base64 && ev.type) {
+        imageDataUrl = `data:${ev.type};base64,${ev.base64}`;
+      }
+    }
+
+    return {
+      id: docSnap.id,
+
+      // basic info
+      studentName: d.studentName || "",
+      studentID: d.studentID || d.studentId || "",
+
+      // ✅ correct fields
+      location: d.location || "",
+      date: d.occurredDate || "",
+      kind: d.kind || "",
+
+      // status
+      status: d.status || "Pending",
+
+      sanctionRemarks: d.sanctionRemarks || "", // ✅ REQUIRED
+
+      // image from student
+      imageDataUrl,
+
+      // optional (if you want later)
+      details: d.details || ""
+    };
+  });
+
+  renderTable(allIncidents);
+}
+
+
+
+
+
+document.addEventListener("click", e => {
+  if (!e.target.closest(".dropdown")) {
+    document.querySelectorAll(".dropdown").forEach(d => d.classList.remove("show"));
+  }
+});
+
+
+  /* ---------------- AUTH ---------------- */
+  onAuthStateChanged(auth, user => {
+    if (!user) {
+      alert("You are not logged in.");
+      return;
+    }
+    loadIncidentReports();
+  });
+
+  window.toggleLogout = () => {
+  const btn = document.getElementById("logoutBtn");
+  btn.style.display = btn.style.display === "block" ? "none" : "block";
+};
+
+</script>
+
+
+</body>
+</html>

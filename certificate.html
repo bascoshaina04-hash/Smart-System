@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Certificate Preview</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Page layout tailored to printed A4; uses explicit point sizes per your request */
+    @page { margin: 24mm; }
+    html,body { height:100%; margin:0; background:#fff; color:#000; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .page {
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      padding:28mm 22mm;
+      box-sizing:border-box;
+      display:block;
+    
+    }
+
+    /* Header with logo left, uni text centered next to it */
+    .header {
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    .logo {
+      width:110px;
+      height:110px;
+      flex:0 0 110px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-start;
+    }
+    .logo img { max-width:100%; max-height:100%; object-fit:contain; }
+
+    .univ-lines {
+      flex:1;
+      text-align:center;
+      margin-left:-8px; /* visual centering under page */
+    }
+    .univ-lines .line1 {
+      font-family: "Bookman Old Style", "Bookman", serif;
+      font-weight:700;
+      font-size:12pt;
+      letter-spacing:1px;
+      margin-bottom:2px;
+    }
+    .univ-lines .line2 {
+      font-family: "Bookman Old Style", "Bookman", serif;
+      font-weight:700;
+      font-size:12pt;
+      margin-bottom:6px;
+    }
+    .univ-lines .title-small {
+      font-family: "Bookman Old Style", "Bookman", serif;
+      font-weight:700;
+      font-size:24pt; 
+      margin-top:6px;
+      
+    }
+    .title-small {
+      font-family: "Bookman Old Style", "Bookman", serif;
+      font-weight:700;
+      font-size:24pt; 
+      margin-top:6px;
+      
+    }
+ 
+    .univ-locs {
+      margin-top:6px;
+      font-size:10pt;
+      color:#333;
+    }
+
+    /* Date (left) */
+    .date {
+      margin-top:10px;
+      margin-bottom:6px;
+      font-size:12pt; /* Times New Roman 12pt for body */
+      line-height:1.0;
+    }
+
+    /* TO WHOM IT MAY CONCERN heading */
+    .to-whom {
+      font-family: "Times New Roman", Times, serif;
+      font-weight:700;
+      font-size:14pt; /* Times New Roman 14pt */
+      margin-top:10px;
+      margin-bottom:6px;
+      line-height:1.0;
+    }
+
+    /* Body content */
+    .content {
+      margin-top:8px;
+      font-size:12pt; /* Times New Roman 12pt */
+      line-height:1.5; /* exactly 1.0 line spacing as requested */
+      text-align:justify;
+    }
+    .content p { margin:8px 0; }
+
+    .student-name {
+      font-weight:700;
+      text-transform:uppercase;
+      font-size:12pt;
+    }
+
+    /* editable enrollment sentence appearance */
+      #enroll-sentence {
+      display:inline-block;
+      border: none;              /* removed underline */
+      padding:0;                 /* no extra padding */
+      min-width:200px;
+      white-space:normal;
+      font-size:12pt;
+      line-height:1.0;
+      font-family:"Times New Roman", Times, serif;
+      outline: none;             /* remove focus outline */
+    }
+    /* make editable area look like normal text even while focused */
+    #enroll-sentence:focus {
+      box-shadow: none;
+      outline: none;
+    }
+
+    /* Signature area aligned to the right bottom */
+    .sig-row {
+      margin-top:60px;
+      display:flex;
+      justify-content:flex-end;
+      align-items:flex-end;
+    }
+    .signature {
+      width:360px;
+      text-align:right;
+      font-family:"Times New Roman", Times, serif;
+      line-height:1.0;
+    }
+    .signature .sig-name {
+      font-weight:700;
+      font-size:14pt; /* Times New Roman 14pt */
+      text-decoration:underline;
+      margin-bottom:6px;
+    }
+    .signature .sig-title {
+      font-size:14pt; /* Times New Roman 14pt */
+    }
+
+    /* small placeholder for seal at left bottom (optional) */
+    .seal {
+      width:120px;
+      height:80px;
+      margin-right:auto;
+      font-size:10pt;
+      color:#444;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+    }
+
+    /* controls (print/close) - hidden in print */
+    .controls { position:fixed; left:16px; top:16px; z-index:9999; display:flex; gap:8px; }
+    .btn { background:#1f6feb; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:700; }
+    .btn.secondary { background:#6b7280; }
+
+    @media print {
+      .controls { display:none !important; }
+      body { margin:0; }
+      .page { margin:0; padding:24mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <button class="btn" id="printBtn">Print / Save as PDF</button>
+    <button class="btn secondary" id="closeBtn">Close</button>
+  </div>
+
+  <div class="page" role="document" aria-label="Good Moral Certificate">
+    <header class="header" role="banner">
+      <div class="logo" aria-hidden="true">
+        <img id="logoImg" src="icons/ustplogo.png" alt="University logo" onerror="this.style.display='none'">
+      </div>
+
+      <div class="univ-lines" aria-hidden="false">
+        <div class="line1">UNIVERSITY OF SCIENCE AND TECHNOLOGY</div>
+        <div class="line2">OF SOUTHERN PHILIPPINES</div>
+        <div class="univ-locs">Alubijid | Cagayan de Oro | Claveria | Jasaan | Oroquieta | Panaon</div>
+      </div>
+    </header>
+    <br><br>
+    <div class="title-small">Certificate of Good Moral Character</div>
+    <br>
+    <main>
+      <div class="date" id="todayDate" aria-label="Date"></div>
+
+      <br>
+
+      <div class="to-whom">TO WHOM IT MAY CONCERN:</div>
+
+      <br>
+
+      <section class="content" aria-label="Certificate body">
+        <p>
+          This is to certify that, based on the records in this office
+          <span class="student-name" id="stud-name"></span>
+          was a student of <strong>University of Science and Technology of Southern Philippines</strong>.
+          <span id="enroll-sentence" contenteditable="true" aria-label="Editable enrollment sentence"></span>
+        </p>
+
+        <br>
+
+        <p>
+          This office which is the in-charge of student discipline has no record of any instance, wherein the above-mentioned student has been directly or indirectly involved in any case of infraction of school rules and regulations.
+        </p>
+
+        <br>
+
+        <p>
+          THIS IS TO CERTIFY FURTHER that the aforementioned student has been known to be of <strong>GOOD MORAL CHARACTER</strong>.
+        </p>
+        <br>
+        <p>
+          Issued upon request for whatever legal purpose this may serve <span id="pronoun-object"></span> best.
+        </p>
+      </section>
+
+      <div class="sig-row" aria-hidden="true">
+       
+        <div class="signature" role="contentinfo">
+          <div style="height:36px"></div>
+          <div class="sig-name">DR. BERNADETTE E. CALVO</div>
+          <div class="sig-title">Head, Student Affairs and Services</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // read params
+    function getParam(name) {
+      try { const p = new URLSearchParams(window.location.search); return p.has(name) ? p.get(name) : ""; }
+      catch (e) { return ""; }
+    }
+    function sanitize(s){ return s == null ? "" : String(s); }
+
+    // fill student name (uppercase)
+    const rawName = sanitize(getParam('name') || "");
+    const studNameEl = document.getElementById('stud-name');
+    studNameEl.textContent = rawName ? rawName.toUpperCase() : "—";
+
+    // gender/pronoun
+    const genderParam = (sanitize(getParam('gender') || "")).toLowerCase();
+    function pronounFromGender(g) {
+      if (!g) return { sub: "They", obj: "them" };
+      if (["female","f","woman","girl"].includes(g)) return { sub: "She", obj: "her" };
+      if (["male","m","man","boy"].includes(g)) return { sub: "He", obj: "him" };
+      return { sub: "They", obj: "them" };
+    }
+    const pron = pronounFromGender(genderParam);
+    document.getElementById('pronoun-object').textContent = pron.obj;
+
+    // enrollment sentence: prefer passed param, else build default
+    const enrollParam = sanitize(getParam('enroll') || "");
+    const programParam = sanitize(getParam('program') || "");
+    const defaultEnroll = enrollParam || `${pron.sub} was last enrolled in January, 2025 as a ${programParam || 'first year student in the program Bachelor of Science in Information Technology'}.`;
+    const enrollEl = document.getElementById('enroll-sentence');
+    enrollEl.innerText = defaultEnroll;
+
+    // date: format like "April 10, 2025"
+    const today = new Date();
+    const todayFmt = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('todayDate').textContent = todayFmt;
+
+    // print/close
+    document.getElementById('printBtn').addEventListener('click', () => {
+      const txt = enrollEl.innerText.trim();
+      if (!txt) { if (!confirm('Enrollment sentence is empty. Continue printing?')) return; }
+      if (!rawName) { if (!confirm('Student name is empty. Continue printing?')) return; }
+      // Trigger print dialog — when laptop is connected to printer, user can print
+      window.print();
+    });
+    document.getElementById('closeBtn').addEventListener('click', () => window.close());
+
+    // focus editable area for convenience
+    try {
+      enrollEl.focus();
+      const range = document.createRange();
+      range.selectNodeContents(enrollEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (e) { /* ignore */ }
+  </script>
+</body>
+</html>

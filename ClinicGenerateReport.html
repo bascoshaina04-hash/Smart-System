@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clinic Generate Visit Report</title>
+
+  <!-- Fonts / icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="ClinicGenerateReport.css">
+</head>
+<body>
+
+  <div id="banner" role="status" aria-live="polite"><span id="bannerText"></span> <button id="dismissBanner">OK</button></div>
+
+  <aside class="sidebar" aria-label="Main sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Smart logo">
+      <h2>Smart</h2>
+    </div>
+    <button class="nav-btn" onclick="location.href='ClinicDashboard.html'">Home</button>
+    <button class="nav-btn" onclick="location.href='ClinicHealthReport.html'">Health Report</button>
+    <button class="nav-btn" onclick="location.href='ClinicMedicineLogs.html'">Medicine Logs</button>
+    <button class="nav-btn active" onclick="location.href='ClinicGenerateReport.html'">Generate Report</button>
+  </aside>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon" />
+        </div>
+        <button class="logout" id="logoutBtn" onclick="signOutUser()" style="display:none;">Logout</button>
+      </div>
+    </div>
+
+    <main>
+      <div class="content">
+        <div class="controls">
+  <button id="addVisitBtn" class="btn-new">
+    <i class="fas fa-plus"></i> Add Visit Report
+  </button>
+
+  <button id="generateBtn" class="btn-generate">
+    <i class="fas fa-print"></i> Generate
+  </button>
+
+        </div>
+
+        <div class="table-container" role="region" aria-label="Health reports table">
+          <table id="reportsTable" class="recents-table" role="table" aria-label="Health reports">
+            <thead>
+              <tr>
+                <th style="width:130px">Date</th>
+                <th style="width:260px">Student Name</th>
+                <th style="width:260px">Year & Course</th>
+                <th style="width:120px">Reason</th>
+                <th style="width:260px">Action Taken</th>
+                <th style="width:160px">Nurse Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirm Export Modal -->
+  <div id="confirmExportModal" aria-hidden="true">
+    <div class="confirmBox" role="dialog" aria-modal="true" aria-labelledby="confirmExportTitle">
+      <h3 id="confirmExportTitle">Are you sure you want to generate this Clinic Visit Report?</h3>
+      <p style="color:#444; margin-top:6px;">This will download a PDF of the visible table rows.</p>
+      <div class="confirmActions">
+        <button class="no" id="confirmNoBtn">No</button>
+        <button class="yes" id="confirmYesBtn">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Visit Report Modal -->
+<div id="addVisitModal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal">
+    <h2 style="color: aliceblue;">Add Visit Report</h2>
+
+    <form id="visitForm" class="modal-form" novalidate>
+      <input type="date" id="visitDate" required readonly />
+
+      <input type="text" id="visitStudent" placeholder="Student Name" required />
+
+      <input type="text" id="visitYearCourse" placeholder="Year & Course" required />
+
+      <input type="text" id="visitReason" placeholder="Reason" required />
+
+      <input type="text" id="visitAction" placeholder="Action Taken" required />
+
+      <textarea
+        id="visitRemarks"
+        placeholder="Nurse Remarks"
+        rows="3"
+      ></textarea>
+
+      <div class="modal-actions">
+        <button type="button" id="cancelVisit">Cancel</button>
+        <button type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+  <!-- Firebase v11 imports -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, query, orderBy, onSnapshot, getDoc,
+      addDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:51b4babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM helpers
+    const $ = id => document.getElementById(id);
+    const banner = $('banner');
+    const bannerText = $('bannerText');
+    const dismissBanner = $('dismissBanner');
+    const reportsTbody = $('reportsTbody');
+    const filterDateInput = $('filterDate');
+    const logoutBtn = $('logoutBtn');
+    const generateBtn = $('generateBtn');
+    const confirmModal = $('confirmExportModal');
+    const confirmYesBtn = $('confirmYesBtn');
+    const confirmNoBtn = $('confirmNoBtn');
+
+    dismissBanner.addEventListener('click', ()=> banner.style.display='none');
+
+    function showBanner(msg){ bannerText.textContent = msg; banner.style.display = 'block'; }
+    function hideBanner(){ banner.style.display = 'none'; }
+
+    function formatDateReadable(isoDate) {
+      if (!isoDate) return '';
+      const [y,m,d] = isoDate.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    // Render a single table row
+    function addReportRow(report){
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td'); tdDate.textContent = report.date || ''; tr.appendChild(tdDate);
+      const tdName = document.createElement('td'); tdName.textContent = report.studentName || ''; tr.appendChild(tdName);
+      const tdYearCourse = document.createElement('td'); tdYearCourse.textContent = report.yearAndCourse || ''; tr.appendChild(tdYearCourse);
+      const tdReason = document.createElement('td'); tdReason.textContent = report.reason || ''; tr.appendChild(tdReason);
+      const tdAction = document.createElement('td'); tdAction.textContent = report.actionTaken || ''; tr.appendChild(tdAction);
+      const tdRemarks = document.createElement('td'); tdRemarks.textContent = report.nurseRemarks || ''; tr.appendChild(tdRemarks);
+      reportsTbody.appendChild(tr);
+    }
+
+    // Realtime listener for visit_reports
+    let unsubscribe = null;
+    function startRealtimeListener(){
+      const q = query(collection(db,'visit_reports'), orderBy('createdAt','desc'));
+      unsubscribe = onSnapshot(q, snap => {
+        reportsTbody.innerHTML = '';
+        if (snap.empty) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" style="text-align:center;color:#666;padding:12px;">No visit reports found.</td>';
+          reportsTbody.appendChild(tr);
+          return;
+        }
+        snap.forEach(docSnap => {
+          const d = docSnap.data() || {};
+          addReportRow({
+            date: d.date,
+            studentName: d.studentName,
+            yearAndCourse: d.yearAndCourse,
+            reason: d.reason,
+            actionTaken: d.actionTaken,
+            nurseRemarks: d.nurseRemarks
+          });
+        });
+      }, err => {
+        console.error('visit_reports onSnapshot error:', err);
+        showBanner('Failed to load visit reports. See console for details.');
+      });
+    }
+
+    // date client-side filter
+    if (filterDateInput) {
+  filterDateInput.addEventListener('change', () => {
+    const val = filterDateInput.value;
+    if (!val) {
+      Array.from(reportsTbody.querySelectorAll('tr')).forEach(r => r.style.display = '');
+      return;
+    }
+    const formatted = formatDateReadable(val);
+    Array.from(reportsTbody.querySelectorAll('tr')).forEach(row => {
+      const firstCell = row.children[0];
+      if (!firstCell) return;
+      row.style.display = firstCell.textContent.trim() === formatted ? '' : 'none';
+    });
+  });
+}
+
+
+    // signOut helper (for header logout button)
+    function signOutUser(){
+      signOut(auth).catch(err => console.error('Sign-out failed', err));
+    }
+    window.signOutUser = signOutUser;
+    window.toggleLogout = function(){ logoutBtn.style.display = logoutBtn.style.display === 'block' ? 'none' : 'block'; }
+
+    // Require auth: start listener after authenticated
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.warn('No auth user — redirecting to Login.html');
+        window.location.href = 'Login.html';
+        return;
+      }
+      // show logout
+      logoutBtn.style.display = 'block';
+
+      // start realtime listener
+      startRealtimeListener();
+    });
+
+    // Hook Generate button to show confirm dialog
+    generateBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'flex';
+      confirmModal.setAttribute('aria-hidden','false');
+    });
+    confirmNoBtn.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      confirmModal.setAttribute('aria-hidden','true');
+    });
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        confirmModal.style.display = 'none';
+        confirmModal.setAttribute('aria-hidden','true');
+      }
+    });
+
+    // ADD VISIT REPORT MODAL LOGIC
+const addVisitBtn = document.getElementById('addVisitBtn');
+const addVisitModal = document.getElementById('addVisitModal');
+const cancelVisit = document.getElementById('cancelVisit');
+const visitForm = document.getElementById('visitForm');
+
+// open modal
+addVisitBtn.addEventListener('click', () => {
+  // set today's date automatically
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('visitDate').value = today;
+
+  addVisitModal.style.display = 'flex';
+  addVisitModal.setAttribute('aria-hidden','false');
+});
+
+// close modal
+function closeVisitModal() {
+  addVisitModal.style.display = 'none';
+  addVisitModal.setAttribute('aria-hidden','true');
+  visitForm.reset();
+}
+
+cancelVisit.addEventListener('click', closeVisitModal);
+
+// click outside closes modal
+addVisitModal.addEventListener('click', e => {
+  if (e.target === addVisitModal) closeVisitModal();
+});
+
+// submit visit report
+visitForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  try {
+    const dateISO = document.getElementById('visitDate').value;
+    const formattedDate = formatDateReadable(dateISO);
+
+    await addDoc(collection(db, 'visit_reports'), {
+      date: formattedDate,
+      studentName: document.getElementById('visitStudent').value.trim(),
+      yearAndCourse: document.getElementById('visitYearCourse').value.trim(),
+      reason: document.getElementById('visitReason').value.trim(),
+      actionTaken: document.getElementById('visitAction').value.trim(),
+      nurseRemarks: document.getElementById('visitRemarks').value.trim(),
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser.uid
+    });
+
+    closeVisitModal();
+  } catch (err) {
+    console.error('Failed to add visit report:', err);
+    showBanner('Failed to save visit report.');
+  }
+});
+
+  </script>
+
+  <!-- jsPDF + autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    // gather visible table data
+    function gatherTableData() {
+      const table = document.getElementById('reportsTable');
+      if (!table) return { headers: [], rows: [] };
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+      const rows = [];
+      Array.from(table.querySelectorAll('tbody tr')).forEach(tr => {
+        if (getComputedStyle(tr).display === 'none') return;
+        const cells = Array.from(tr.children).map(td => td.textContent.trim());
+        // skip "no data" row
+        if (cells.length === 1 && cells[0].toLowerCase().includes('no visit reports')) return;
+        rows.push(cells);
+      });
+      return { headers, rows };
+    }
+
+    async function generatePDFFile(filename) {
+      const { jsPDF } = window.jspdf;
+      const { headers, rows } = gatherTableData();
+      const doc = new jsPDF('landscape', 'pt', 'letter');
+      const title = 'Monthly Health Visit Summary';
+      doc.setFontSize(16);
+      doc.text(title, 40, 40);
+
+      doc.autoTable({
+        head: [headers],
+        body: rows,
+        startY: 70,
+        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [47,83,176], textColor: 255, halign: 'left' },
+        theme: 'grid',
+        margin: { left: 40, right: 40 }
+      });
+
+      doc.save(filename || 'clinic_visit_reports.pdf');
+    }
+
+    // Generate when user confirms Yes
+    document.getElementById('confirmYesBtn').addEventListener('click', async () => {
+      const modal = document.getElementById('confirmExportModal');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden','true');
+      try {
+        await generatePDFFile('clinic_visit_reports.pdf');
+      } catch (err) {
+        console.error('PDF generation failed', err);
+        const b = document.getElementById('banner');
+        if (b) {
+          // show banner
+          const bannerText = document.getElementById('bannerText');
+          bannerText.textContent = 'PDF export failed. Check console.';
+          b.style.display = 'block';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

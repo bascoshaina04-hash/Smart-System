@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Genos:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="GuidanceAppoint.css">
+  <title>Guidance • Appointments (Updated)</title>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="icons/FInalLogo.png" alt="Logo"/>
+      <h2>Smart</h2>
+    </div>
+    <button onclick="window.location.href='GuidanceDashboard.html'">Home</button>
+    <button onclick="window.location.href='GuidanceExit.html'">Exit Interview</button>
+    <button class="active" onclick="window.location.href='GuidanceAppoint.html'">Appointments</button>
+    <button onclick="window.location.href='GuidanceConsult.html'">Consultations</button>
+    <button onclick="window.location.href='GuidanceAnn.html'">Announcements</button>
+    <button onclick="window.location.href='GuidanceCounse.html'">Reports</button>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <div class="user-container">
+        <div class="user-icon-container" onclick="toggleLogout()">
+          <img src="icons/user-icon.png" alt="User Icon"/>
+        </div>
+        <button class="logout" id="logoutBtn" onclick="alert('Hook signOut here if needed')">Logout</button>
+      </div>
+    </div>
+
+    <!-- Filter + Search -->
+    <div class="top-controls">
+      <div class="filter-container">
+        <select id="status-filter">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="search-container">
+        <input id="search" type="text" placeholder="Search">
+      </div>
+    </div>
+
+    <!-- Appointments table: wrapped so only the table area scrolls -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Slot</th>
+            <th>Student Name</th>
+            <th>Student ID</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="apptBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modals omitted for brevity (same markup as before) -->
+  <div id="viewModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeView()">&times;</span>
+      <h2>Appointment Details</h2>
+      <p><span>Student Name:</span> <span id="m_studentName"></span></p>
+      <p><span>Student ID:</span> <span id="m_studentID"></span></p>
+      <p><span>Date:</span> <span id="m_date"></span></p>
+      <p><span>Time:</span> <span id="m_time"></span></p>
+      <p><span>Purpose:</span> <span id="m_purpose"></span></p>
+      <p><span>Title:</span> <span id="m_concern"></span></p>
+      <p><span>Office:</span> <span id="m_office"></span></p>
+      <p><span>Status:</span> <span id="m_status"></span></p>
+      <p><span>Created At:</span> <span id="m_createdAt"></span></p>
+    </div>
+  </div>
+
+  <div id="cancelModal" class="modal">
+    <div class="modal-content" style="width:520px;">
+      <span class="close" id="cancelCloseBtn">&times;</span>
+      <h2>Cancel Appointment</h2>
+      <p style="margin-bottom:8px;color:#333;">Please enter a remark explaining why the guidance wants to cancel this appointment:</p>
+      <textarea id="cancelRemark" style="width:100%;min-height:110px;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px;"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+        <button id="cancelAbort" style="background:#f1f1f1;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;">Close</button>
+        <button id="confirmCancel" style="background:#f44336;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:bold;">Confirm Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="approveModal" class="modal">
+    <div class="modal-content" style="width:480px;">
+      <span class="close" id="approveCloseBtn">&times;</span>
+      <h2>Approve Appointment</h2>
+      <p style="margin:10px 0 18px;color:#333;font-size:15px;">Are you sure you want to approve/accept this appointment?</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button id="approveCancelBtn" style="background:#f1f1f1;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;">Cancel</button>
+        <button id="confirmApproveBtn" style="background:#273ea3;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:bold;">Yes, Approve</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import {
+      getFirestore, collection, onSnapshot, query, where, updateDoc, doc,
+      serverTimestamp, getDocs, addDoc, runTransaction
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    // Firebase config (keep as-is)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAL3PqM_pZclC6QIzijirPZH7zweJ9Im8Y",
+      authDomain: "smart-723de.firebaseapp.com",
+      projectId: "smart-723de",
+      storageBucket: "smart-723de.appspot.com",
+      messagingSenderId: "316347306734",
+      appId: "1:316347306734:web:514babfe97cdb2e06d9ff"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // DOM refs
+    const bodyEl   = document.getElementById("apptBody");
+    const filterEl = document.getElementById("status-filter");
+    const searchEl = document.getElementById("search");
+
+    const cancelModal = document.getElementById("cancelModal");
+    const cancelRemarkEl = document.getElementById("cancelRemark");
+    const confirmCancelBtn = document.getElementById("confirmCancel");
+    const cancelAbortBtn = document.getElementById("cancelAbort");
+    const cancelCloseBtn = document.getElementById("cancelCloseBtn");
+
+    const approveModal = document.getElementById("approveModal");
+    const approveCloseBtn = document.getElementById("approveCloseBtn");
+    const confirmApproveBtn = document.getElementById("confirmApproveBtn");
+    const approveCancelBtn = document.getElementById("approveCancelBtn");
+
+    let cache = [];
+    let availabilityMap = {};
+    let pendingCancelAppt = null;
+    let pendingApproveAppt = null;
+
+    const fmtCreated = (ts) => {
+      if (!ts?.toDate) return null;
+      return ts.toDate().toLocaleDateString();
+    };
+
+    function normalize(v){ return (v ?? "").toString().toLowerCase(); }
+    function statusClassFrom(label){
+      const v = String(label||"").toLowerCase();
+      if (v === "approved" || v === "approve" || v === "resolved") return "status-resolved";
+      if (v === "rejected") return "status-rejected";
+      if (v === "cancelled") return "status-cancelled";
+      return "status-pending";
+    }
+
+    function bookingsForSlot(dateStr, time){
+      return cache
+        .filter(a => matchDateForSlot(a, dateStr) && normalizeTimeForSlot(a.time) === normalizeTimeForSlot(time))
+        .filter(a => { const s = normalize(a.status); return s !== "rejected" && s !== "cancelled"; })
+        .sort((x,y) => {
+          const xa = x.createdAt?.toDate ? x.createdAt.toDate().getTime() : 0;
+          const ya = y.createdAt?.toDate ? y.createdAt.toDate().getTime() : 0;
+          return xa - ya;
+        });
+    }
+
+    // date/time normalization utilities (unchanged)
+    function parseToYMD(val){
+      if (!val) return undefined;
+      try {
+        if (typeof val.toDate === 'function') {
+          const d = val.toDate();
+          return toYMD(d);
+        }
+        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        if (typeof val === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val.trim())) {
+          const [m,d,y] = val.trim().split('/');
+          return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        }
+        if (typeof val === 'string') {
+          const d = new Date(val);
+          if (!isNaN(d)) return toYMD(d);
+        }
+        if (val instanceof Date) return toYMD(val);
+        if (typeof val === 'number') {
+          const d = new Date(val);
+          if (!isNaN(d)) return toYMD(d);
+        }
+      } catch (e) {}
+      return undefined;
+    }
+    function toYMD(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    }
+    function normalizeTimeForSlot(val){
+      if (!val) return undefined;
+      try {
+        if (typeof val.toDate === 'function') {
+          const d = val.toDate();
+          return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+        if (val instanceof Date) return `${val.getHours()}:${String(val.getMinutes()).padStart(2,'0')}`;
+        if (typeof val === 'string') {
+          const s = val.trim();
+          const d = new Date(s);
+          if (!isNaN(d)) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+          const m = s.match(/(\d{1,2}):(\d{2})/);
+          if (m) return `${Number(m[1])}:${String(Number(m[2])).padStart(2,'0')}`;
+        }
+        if (typeof val === 'number') {
+          const d = new Date(val);
+          if (!isNaN(d)) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+      } catch(e){}
+      return undefined;
+    }
+
+    function matchDateForSlot(appointment, dateStrKey){
+      if (appointment.dateStr && appointment.dateStr === dateStrKey) return true;
+      const parsed = parseToYMD(appointment.date || appointment.dateStr || appointment.createdAt || appointment.startAt);
+      return parsed === dateStrKey;
+    }
+
+    function slotKey(dateStrISO, timeNormalized){ return `${dateStrISO}__${timeNormalized}`; }
+
+    // Rendering table (unchanged behavior)
+    function render(){
+      const statusFilter = filterEl.value;
+      const q = normalize(searchEl.value);
+      const terms = q.split(/\s+/).filter(Boolean);
+
+      bodyEl.innerHTML = "";
+
+      cache
+        .filter(a => statusFilter === "all" ? true : normalize(a.status) === statusFilter)
+        .filter(a => {
+          const createdAtStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleString() : "";
+          const hay = [
+            a.date, a.dateStr, a.time, a.studentName, a.studentID, a.purpose,
+            a.concern, a.office, a.status, createdAtStr
+          ].map(normalize).join(" ");
+          return terms.length ? terms.every(t => hay.includes(t)) : true;
+        })
+        .sort((a,b) => {
+          const da = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const db = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return db - da;
+        })
+        .forEach(a => {
+          const tr = document.createElement("tr");
+
+          // DATE → scheduled date (NOT createdAt)
+const tdDate = document.createElement("td");
+tdDate.textContent = displayScheduledDate(a);
+
+// TIME → 12-hour format
+const tdTime = document.createElement("td");
+tdTime.textContent = displayTime12h(a.time);
+
+
+          const dateForKey = parseToYMD(a.date || a.dateStr || a.createdAt || a.startAt);
+          const timeForKey = normalizeTimeForSlot(a.time);
+          const bookings = bookingsForSlot(dateForKey, timeForKey);
+          const idx = bookings.findIndex(x => x.id === a.id);
+          const position = (idx === -1) ? bookings.length + 1 : idx + 1;
+
+          let displayCap = '—';
+          if (dateForKey && timeForKey) {
+            const avail = availabilityMap[dateForKey];
+            if (avail && avail.caps && avail.caps.hasOwnProperty(timeForKey)) {
+              displayCap = String(avail.caps[timeForKey]);
+            }
+          } else {
+            if (a.cap !== undefined && a.cap !== null && !Number.isNaN(Number(a.cap))) displayCap = String(Number(a.cap));
+          }
+
+          const tdSlot = document.createElement("td");
+          tdSlot.textContent = `${position} / ${displayCap}`;
+
+          const tdName = document.createElement("td"); tdName.textContent = a.studentName || "—";
+          const tdSID  = document.createElement("td"); tdSID.textContent  = a.studentID || "—";
+          const tdPurpose = document.createElement("td"); tdPurpose.textContent = a.purpose || "—";
+          const tdStatus = document.createElement("td");
+          const chip = document.createElement("span");
+          const label = (a.status || "Pending");
+          chip.className = `status-chip ${statusClassFrom(label)}`;
+          chip.textContent = label;
+          tdStatus.appendChild(chip);
+
+          const tdAction = document.createElement("td");
+          const lowerStatus = String(label).toLowerCase();
+          if (lowerStatus === "cancelled" || lowerStatus === "rejected") {
+            tdAction.innerHTML = `
+              <div class="dropdown">
+                <button class="dropdown-btn">Action ▼</button>
+                <div class="dropdown-content">
+                  <div data-act="view">View</div>
+                </div>
+              </div>
+            `;
+          } else if (lowerStatus === "approved") {
+            tdAction.innerHTML = `
+              <div class="dropdown">
+                <button class="dropdown-btn">Action ▼</button>
+                <div class="dropdown-content">
+                  <div data-act="view">View</div>
+                  <div data-act="cancel">Cancel</div>
+                </div>
+              </div>
+            `;
+          } else {
+            tdAction.innerHTML = `
+              <div class="dropdown">
+                <button class="dropdown-btn">Action ▼</button>
+                <div class="dropdown-content">
+                  <div data-act="view">View</div>
+                  <div data-act="approved">Approve</div>
+                  <div data-act="rejected">Reject</div>
+                </div>
+              </div>
+            `;
+          }
+
+          tr.append(tdDate, tdTime, tdSlot, tdName, tdSID, tdPurpose, tdStatus, tdAction);
+          bodyEl.appendChild(tr);
+
+          const ddBtn = tr.querySelector(".dropdown-btn");
+          const dd    = tr.querySelector(".dropdown");
+          if (ddBtn) ddBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.querySelectorAll(".dropdown").forEach(x => { if (x !== dd) x.classList.remove("show"); });
+            dd.classList.toggle("show");
+          });
+
+          tr.querySelectorAll(".dropdown-content div").forEach(opt => {
+            opt.addEventListener("click", async () => {
+              const act = opt.dataset.act;
+              dd.classList.remove("show");
+              if (act === "view") openView(a);
+              else if (act === "approved") { pendingApproveAppt = a; approveModal.style.display = "block"; }
+              else if (act === "rejected") {
+                try { await updateDoc(doc(db, "appointments", a.id), { status: "rejected" }); }
+                catch (e) { console.error(e); alert("Failed to update status."); }
+              } else if (act === "cancel") {
+                pendingCancelAppt = a;
+                cancelRemarkEl.value = "";
+                cancelModal.style.display = "block";
+              }
+            });
+          });
+        });
+    }
+
+    function openView(a){
+      document.getElementById("m_studentName").textContent = a.studentName || "—";
+      document.getElementById("m_studentID").textContent   = a.studentID || "—";
+      document.getElementById("m_date").textContent = displayScheduledDate(a);
+      document.getElementById("m_time").textContent = displayTime12h(a.time);
+      document.getElementById("m_purpose").textContent     = a.purpose || "—";
+      document.getElementById("m_concern").textContent     = a.concern || "—";
+      document.getElementById("m_office").textContent      = a.office || "—";
+      document.getElementById("m_status").textContent      = a.status || "—";
+      document.getElementById("m_createdAt").textContent   = (a.createdAt?.toDate) ? a.createdAt.toDate().toLocaleString() : "—";
+      document.getElementById("viewModal").style.display   = "block";
+    }
+    window.closeView = () => { document.getElementById("viewModal").style.display = "none"; };
+
+    document.addEventListener("click", ()=> document.querySelectorAll(".dropdown").forEach(x => x.classList.remove("show")));
+
+    // LISTENERS (live)
+    function listenAppointments(){
+      const qRef = query(collection(db, "appointments"), where("office","==","guidance"));
+      onSnapshot(qRef, (snap) => {
+        cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+      }, (err) => {
+        console.error("appointments listener error:", err);
+      });
+    }
+
+    function listenAvailability(){
+      const col = collection(db, "availability");
+      onSnapshot(col, snap => {
+        const map = {};
+        snap.docs.forEach(d => {
+          const data = d.data() || {};
+          const dateStr = data.dateStr || data.date || undefined;
+          const parsedDate = parseToYMD(dateStr);
+          if (!parsedDate) return;
+          const caps = (data.caps && typeof data.caps === 'object') ? data.caps : {};
+          const normCaps = {};
+          Object.keys(caps).forEach(k => {
+            const nk = normalizeTimeForSlot(k);
+            if (nk && !Number.isNaN(Number(caps[k]))) normCaps[nk] = Number(caps[k]);
+          });
+          map[parsedDate] = {
+            caps: normCaps,
+            slots: Array.isArray(data.slots) ? data.slots.map(t=>normalizeTimeForSlot(t)).filter(Boolean) : []
+          };
+        });
+        availabilityMap = map;
+        render();
+      }, err => {
+        console.error("availability listener failed:", err);
+      });
+    }
+
+    // Cancel & Approve handlers
+    cancelAbortBtn.addEventListener("click", () => { pendingCancelAppt = null; cancelModal.style.display = "none"; });
+    cancelCloseBtn.addEventListener("click", () => { pendingCancelAppt = null; cancelModal.style.display = "none"; });
+
+    confirmCancelBtn.addEventListener("click", async () => {
+      if (!pendingCancelAppt) { alert("No appointment selected."); cancelModal.style.display = "none"; return; }
+      const remark = (cancelRemarkEl.value || "").trim();
+      if (!remark) { if (!confirm("No remark entered. Continue cancel without remark?")) return; }
+      try {
+        await updateDoc(doc(db, "appointments", pendingCancelAppt.id), {
+          status: "cancelled",
+          cancelRemark: remark || null,
+          cancelledAt: serverTimestamp()
+        });
+        pendingCancelAppt = null;
+        cancelModal.style.display = "none";
+      } catch (e) {
+        console.error("Failed to cancel appointment:", e);
+        alert("Failed to cancel appointment. Try again.");
+      }
+    });
+
+    approveCancelBtn.addEventListener("click", () => { pendingApproveAppt = null; approveModal.style.display = "none"; });
+    approveCloseBtn.addEventListener("click", () => { pendingApproveAppt = null; approveModal.style.display = "none"; });
+
+    confirmApproveBtn.addEventListener("click", async () => {
+      if (!pendingApproveAppt) { alert("No appointment selected."); approveModal.style.display = "none"; return; }
+      try {
+        await updateDoc(doc(db, "appointments", pendingApproveAppt.id), { status: "approved", approvedAt: serverTimestamp() });
+        pendingApproveAppt = null;
+        approveModal.style.display = "none";
+      } catch (e) {
+        console.error("Failed to approve appointment:", e);
+        alert("Failed to approve appointment. Try again.");
+      }
+    });
+
+    filterEl.addEventListener("change", render);
+    searchEl.addEventListener("input", () => { document.querySelectorAll(".dropdown").forEach(x=>x.classList.remove("show")); render(); });
+    searchEl.addEventListener("keyup", render);
+
+    onAuthStateChanged(auth, () => {
+      listenAppointments();
+      listenAvailability();
+    });
+
+    function displayScheduledDate(a) {
+  return (
+    a.dateStr ||
+    (typeof a.date === "string" ? a.date : null) ||
+    (a.date?.toDate ? a.date.toDate().toLocaleDateString() : "—")
+  );
+}
+
+function displayTime12h(time) {
+  if (!time) return "—";
+  const [h, m] = time.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
+
+    /* ===========================
+       Robust booking helpers (updated)
+       - fixed server counting to handle legacy docs
+       - provide transactional create to avoid races
+    ============================ */
+
+    async function studentHasActiveAppointment(studentID) {
+      if (!studentID) return false;
+      const sid = (studentID||"").toString().trim();
+      for (const a of cache) {
+        if (((a.studentID||"").toString().trim() === sid) && ((a.office||"").toString().toLowerCase() === "guidance")) {
+          const s = (a.status || "").toString().toLowerCase();
+          if (s !== "rejected" && s !== "cancelled") return true;
+        }
+      }
+      try {
+        const q = query(collection(db, "appointments"), where("studentID","==",sid), where("office","==","guidance"));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          const st = (d.data().status || "").toString().toLowerCase();
+          if (st !== "rejected" && st !== "cancelled") return true;
+        }
+      } catch (e) { console.error("studentHasActiveAppointment server check failed:", e); }
+      return false;
+    }
+
+    async function studentHasAppointmentAt(date, time, studentID) {
+      if (!date || !time || !studentID) return false;
+      const dateStr = parseToYMD(date);
+      const timeNorm = normalizeTimeForSlot(time);
+      if (!dateStr || !timeNorm) return false;
+      const sid = (studentID||"").toString().trim();
+
+      for (const a of cache) {
+        if (((a.studentID||"").toString().trim() === sid) && matchDateForSlot(a, dateStr) && normalizeTimeForSlot(a.time) === timeNorm) {
+          const s = (a.status||"").toString().toLowerCase();
+          if (s !== "rejected" && s !== "cancelled") return true;
+        }
+      }
+
+      try {
+        const q = query(collection(db, "appointments"), where("studentID","==",sid), where("office","==","guidance"));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) {
+          const data = d.data();
+          if (parseToYMD(data.date || data.dateStr) === dateStr && normalizeTimeForSlot(data.time) === timeNorm) {
+            const st = (data.status || "").toString().toLowerCase();
+            if (st !== "rejected" && st !== "cancelled") return true;
+          }
+        }
+      } catch (e) { console.error("studentHasAppointmentAt server check failed:", e); }
+
+      return false;
+    }
+
+    // Robust server count: fetch guidance appointments and filter via parseToYMD/normalizeTimeForSlot
+    async function serverCountBookingsForSlot(date, time) {
+      const dateStr = parseToYMD(date);
+      const timeNorm = normalizeTimeForSlot(time);
+      if (!dateStr || !timeNorm) return 0;
+      try {
+        const qRef = query(collection(db, "appointments"), where("office", "==", "guidance"));
+        const snap = await getDocs(qRef);
+        let cnt = 0;
+        for (const d of snap.docs) {
+          const data = d.data();
+          const docDateStr = parseToYMD(data.date || data.dateStr || data.createdAt || data.startAt);
+          const docTimeNorm = normalizeTimeForSlot(data.time || data.startAt);
+          if (docDateStr === dateStr && docTimeNorm === timeNorm) {
+            const st = (data.status || "").toString().toLowerCase();
+            if (st !== "rejected" && st !== "cancelled") cnt++;
+          }
+        }
+        return cnt;
+      } catch (e) {
+        console.error("serverCountBookingsForSlot failed:", e);
+        return bookingsForSlot(dateStr, timeNorm).length;
+      }
+    }
+
+    async function slotHasSpaceServer(date, time, cap) {
+      const dateStr = parseToYMD(date);
+      const timeNorm = normalizeTimeForSlot(time);
+      let effectiveCap = (cap && Number(cap)) ? Number(cap) : undefined;
+      if (dateStr && timeNorm && availabilityMap[dateStr] && availabilityMap[dateStr].caps && availabilityMap[dateStr].caps.hasOwnProperty(timeNorm)) {
+        effectiveCap = availabilityMap[dateStr].caps[timeNorm];
+      }
+      if (!effectiveCap || Number.isNaN(Number(effectiveCap))) effectiveCap = 5;
+      const current = await serverCountBookingsForSlot(dateStr, timeNorm);
+      return current < effectiveCap;
+    }
+
+    // Transactional create to avoid races. Uses runTransaction and server-side checks.
+    async function tryCreateAppointmentTransactional(payload) {
+      try {
+        const { date, time, studentID, cap } = payload;
+        if (!date || !time || !studentID) return { ok: false, message: "Missing date/time/studentID in payload." };
+        const sid = (studentID||"").toString().trim();
+        const dateStr = parseToYMD(date);
+        const timeNorm = normalizeTimeForSlot(time);
+        if (!dateStr || !timeNorm) return { ok: false, message: "Invalid date/time." };
+
+        // Run transaction
+        const colRef = collection(db, "appointments");
+        const result = await runTransaction(db, async (tx) => {
+          // Read guidance appointments (we filter client-side)
+          const qRef = query(collection(db, "appointments"), where("office","==","guidance"));
+          const snap = await getDocs(qRef);
+
+          let currentCount = 0;
+          let studentHasSame = false;
+          let studentHasAny = false;
+
+          for (const d of snap.docs) {
+            const data = d.data();
+            const ds = parseToYMD(data.date || data.dateStr || data.createdAt || data.startAt);
+            const tm = normalizeTimeForSlot(data.time || data.startAt);
+            const st = (data.status || "").toString().toLowerCase();
+            if (st === 'rejected' || st === 'cancelled') continue;
+            if (ds === dateStr && tm === timeNorm) currentCount++;
+            if ((data.studentID||"").toString().trim() === sid) {
+              if (ds === dateStr && tm === timeNorm) studentHasSame = true;
+              studentHasAny = true;
+            }
+          }
+
+          let effectiveCap = cap && Number(cap) ? Number(cap) : 5;
+          if (availabilityMap[dateStr] && availabilityMap[dateStr].caps && availabilityMap[dateStr].caps[timeNorm]) {
+            effectiveCap = availabilityMap[dateStr].caps[timeNorm];
+          }
+
+          if (studentHasSame) throw new Error("You already have a booking for this date and time.");
+          if (studentHasAny) throw new Error("You already have an active appointment. Cancel it first before creating a new one.");
+          if (currentCount >= effectiveCap) throw new Error("Slot full. Capacity reached.");
+
+          const newDocRef = await addDoc(colRef, {
+            ...payload,
+            studentID: sid,
+            dateStr,
+            time: timeNorm,
+            status: payload.status || "pending",
+            createdAt: serverTimestamp()
+          });
+
+          return { ok: true, id: newDocRef.id };
+        });
+
+        return result;
+      } catch (err) {
+        console.error("tryCreateAppointmentTransactional error:", err);
+        return { ok: false, message: err.message || "Failed to create appointment." };
+      }
+    }
+
+    // Expose helpers
+    window.tryCreateAppointment = tryCreateAppointmentTransactional;
+    window.slotHasSpace = async (date, time, cap) => await slotHasSpaceServer(date, time, cap);
+    window.studentHasActiveAppointment = studentHasActiveAppointment;
+    window.getAvailableSlotsForStudent = async function(date, studentID){
+      const dateStr = parseToYMD(date);
+      if (!dateStr) return [];
+      const avail = availabilityMap[dateStr];
+      let candidateTimes = [];
+      if (avail && Array.isArray(avail.slots) && avail.slots.length) {
+        candidateTimes = avail.slots.slice();
+      } else {
+        const times = new Set();
+        cache.forEach(a => {
+          if (matchDateForSlot(a, dateStr)) {
+            const tn = normalizeTimeForSlot(a.time);
+            if (tn) times.add(tn);
+          }
+        });
+        candidateTimes = Array.from(times);
+      }
+      const result = [];
+      for (const t of candidateTimes) {
+        const info = await getSlotInfo(dateStr, t);
+        if (!info) continue;
+        if (info.isFull) continue;
+        const studentHasThisSlot = info.bookings.some(b => {
+          if ((b.studentID || "").toString().trim() !== (studentID || "").toString().trim()) return false;
+          const s = (b.status || "").toString().toLowerCase();
+          if (s === "rejected" || s === "cancelled") return false;
+          return true;
+        });
+        if (studentHasThisSlot) continue;
+        result.push(info.time);
+      }
+      result.sort((a,b) => {
+        const [ah, am] = a.split(':').map(Number);
+        const [bh, bm] = b.split(':').map(Number);
+        return (ah*60 + am) - (bh*60 + bm);
+      });
+      return result;
+    };
+
+    window.getSlotInfo = async function(date, time){
+      const dateStr = parseToYMD(date);
+      const timeNorm = normalizeTimeForSlot(time);
+      if (!dateStr || !timeNorm) return null;
+      const avail = availabilityMap[dateStr];
+      let cap = undefined;
+      if (avail && avail.caps && avail.caps.hasOwnProperty(timeNorm)) cap = Number(avail.caps[timeNorm]);
+      if (!cap || Number.isNaN(cap)) cap = 5;
+      const bookings = bookingsForSlot(dateStr, timeNorm);
+      const currentCount = bookings.length;
+      return { time: timeNorm, cap, currentCount, isFull: currentCount >= cap, bookings };
+    };
+
+    // Diagnostic / migration helpers (run manually in console if needed)
+    async function findBadAppointments() {
+      const q = query(collection(db, "appointments"), where("office","==","guidance"));
+      const snap = await getDocs(q);
+      const bad = [];
+      snap.docs.forEach(d => {
+        const data = d.data();
+        const ds = data.dateStr;
+        const tm = data.time;
+        const badDateStr = !ds || !/^\d{4}-\d{2}-\d{2}$/.test(ds);
+        const badTime = !tm || !/^\d{1,2}:\d{2}$/.test(tm);
+        if (badDateStr || badTime) bad.push({ id: d.id, date: data.date, dateStr: ds, time: tm, status: data.status });
+      });
+      console.log("Found", bad.length, "appointments with missing/odd dateStr or time");
+      console.table(bad.slice(0,200));
+    }
+
+    async function backfillDateStrAndTime(batchSize = 50) {
+      const q = query(collection(db, "appointments"), where("office","==","guidance"));
+      const snap = await getDocs(q);
+      for (const d of snap.docs) {
+        const data = d.data();
+        const dateStr = parseToYMD(data.date || data.dateStr || data.createdAt || data.startAt);
+        const timeNorm = normalizeTimeForSlot(data.time || data.startAt);
+        const updates = {};
+        if (dateStr) updates.dateStr = dateStr;
+        if (timeNorm) updates.time = timeNorm;
+        if (Object.keys(updates).length) {
+          try { await updateDoc(doc(db, "appointments", d.id), updates); }
+          catch(e){ console.error("backfill failed for", d.id, e); }
+        }
+      }
+      console.log("Backfill complete");
+    }
+
+    window._availabilityMap = () => availabilityMap;
+    window._appointmentsCache = () => cache;
+    window.findBadAppointments = findBadAppointments;
+    window.backfillDateStrAndTime = backfillDateStrAndTime;
+  </script>
+</body>
+</html>
